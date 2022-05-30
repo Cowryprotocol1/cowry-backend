@@ -72,10 +72,10 @@ class User_Testing(TestSetUpClass):
             "memo": post_data.data["memo"],
             "amount": float(post_data.data["amount"]) + float(200),
             "bank_name": "FBN",
-            "acct_number": "697079895",
+            "account_number": "697079895",
             "phone_number": "670074567876",
-            "narration": post_data.data["narration"],
-            "blockchainAddress": self.request_data["blockchainAddress"]
+            "transaction_narration": post_data.data["narration"],
+            "blockchain_address": self.request_data["blockchainAddress"]
         }
 
 
@@ -98,9 +98,9 @@ class User_Testing(TestSetUpClass):
             "memo": post_data.data["memo"],
             "amount": float(post_data.data["amount"]) + float(200),
             "bank_name": "FBN",
-            "acct_number": "697079895",
+            "account_number": "697079895",
             "phone_number": "670074567876",
-            "narration": self.random_string(10),
+            "transaction_narration": self.random_string(10),
             "blockchainAddress": self.request_data["blockchainAddress"]
         }
         req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(

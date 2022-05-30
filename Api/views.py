@@ -194,12 +194,12 @@ class ON_RAMP_FIAT_USERS(APIView):
 
         _data = {}
         _data["bank_name"] = request.data.get("bank_name")
-        _data["account_number"] = request.data.get("acct_number")
+        _data["account_number"] = request.data.get("account_number")
         _data["name_on_acct"] = None
         _data["phone_number"] = request.data.get("phone_number")
-        _data["blockchain_address"] = request.data.get("blockchainAddress")
+        _data["blockchain_address"] = request.data.get("blockchain_address")
         _data["transaction_narration"] = request.data.get(
-            "narration")
+            "transaction_narration")
         _data["amount"] = request.data.get("amount")
         memo = request.data.get("memo")
 
