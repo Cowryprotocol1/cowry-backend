@@ -1,4 +1,4 @@
-from Api.utils import amount_to_naira
+# from Api.utils import amount_to_naira
 from modelApp.models import MerchantsTable, TokenTable, TxHashTable, TransactionsTable, XdrGeneratedTransaction
 from modelApp.utils import all_merchant_token_bal
 from rest_framework import serializers

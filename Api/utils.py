@@ -1,11 +1,20 @@
-import secrets, requests, random
+import random
+import secrets
 from typing import List
+
+import requests
+from Blockchains.Stellar.operations import (STABLECOIN_CODE, STABLECOIN_ISSUER,
+                                            Mint_Token, get_horizon_server)
 from decouple import config
-from Blockchains.Stellar.operations import STABLECOIN_CODE, STABLECOIN_ISSUER, Mint_Token
-from modelApp.utils import all_merchant_token_bal, assign_transaction_to_merchant, check_transaction_hash_if_processed, add_and_update_transaction_hash, get_all_merchant_object, get_transaction_By_Id, update_merchant_by_allowedLicenseAmount
-
-from Blockchains.Stellar.operations import get_horizon_server
-
+from modelApp.utils import (add_and_update_transaction_hash,
+                            all_merchant_token_bal,
+                            assign_transaction_to_merchant,
+                            check_transaction_hash_if_processed,
+                            get_all_merchant_object, get_transaction_By_Id,
+                            update_merchant_by_allowedLicenseAmount)
+from .serializers import TokenTableSerializer
+from modelApp.models import TransactionsTable
+from modelApp.utils import update_cleared_uncleared_bal
 
 STAKING_ADDRESS = config("STAKING_ADDRESS")
 STAKING_ADDRESS_SIGNER = config("STAKING_ADDRESS_SIGNER")
@@ -48,84 +57,78 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
     # check transaction status and return needed data using 
     # Check transaction hash has not been processed before
 
+  
+    server = get_horizon_server()
+
     try:
-        server = get_horizon_server()
         tx = server.payments().for_transaction(transaction_hash).call()
+    except Exception as e:
+        print(e)
+        pass
+    else:
 
         amt = round(float(tx["_embedded"]["records"][0]["amount"]), 7)
         recipient_add = tx["_embedded"]["records"][0]["to"]
         sender = tx["_embedded"]["records"][0]["from"]
         asset_code = tx["_embedded"]["records"][0]["asset_code"]
         asset_issuer = tx["_embedded"]["records"][0]["asset_issuer"]
+    
 
         if recipient_add == _address and asset_code == _asset_code and asset_issuer == _asset_issuer:
-            if event_transaction_type == "merchant_staking":
-                hash_check = check_transaction_hash_if_processed(transaction_hash)
-                # If above conditions are met, then the transaction is valid and we have not processed it before
+            try:
+                if event_transaction_type == "merchant_staking":
+                    hash_check = check_transaction_hash_if_processed(transaction_hash)
+                    # If above conditions are met, then the transaction is valid and we have not processed it before
 
-                if hash_check == True:
-                    # This means transaction has been process before and should be ignore
-                    pass
-                elif hash_check == False:
-                    add_and_update_transaction_hash(transaction_hash, memo) #add transaction hash to db and update the merchant txhash table
-                #    Determin how much to mint using the value Naira to USD
-                    try:
-                        # determine the amount of allowed and license token to mint to the merchant
-                        [mint_amt, price] = amount_to_naira(amt)
-                        update_balance_details = update_merchant_by_allowedLicenseAmount(memo, mint_amt, amt, price)
-                        if update_balance_details == True:
-                            Mint_Token(sender, round(float(mint_amt),7), str(memo))
-                        else:
-                            print("Transaction failed")
-                            # Transaction failed, send notification to admin group
-                    except Exception as e:
-                        # Critical error, need to send to admin
-                        print(e)
-                        print("this is a critical error")
+                    if hash_check == True:
+                        # This means transaction has been process before and should be ignore
                         pass
+                    elif hash_check == False:
+                        add_and_update_transaction_hash(transaction_hash, memo) #add transaction hash to db and update the merchant txhash table
+                    #    Determin how much to mint using the value Naira to USD
+                        try:
+                            # determine the amount of allowed and license token to mint to the merchant
+                            [mint_amt, price] = amount_to_naira(amt)
+                            update_balance_details = update_merchant_by_allowedLicenseAmount(memo, mint_amt, amt, price)
+                            if update_balance_details == True:
+                                Mint_Token(sender, round(float(mint_amt),7), str(memo))
+                            else:
+                                print("Transaction failed")
+                                # Transaction failed, send notification to admin group
+                        except Exception as e:
+                            # Critical error, need to send to admin
+                            print(e)
+                            print("this is a critical error")
+                            pass
+                    else:
+                        pass
+                elif event_transaction_type == "user_withdrawals":
+                    merchants_list = TokenTableSerializer(
+                        all_merchant_token_bal(), many=True)
+
+                    selected_ma = merchants_to_process_transaction(
+                        merchants_list.data, tx_amount=amt, bank=None, transaction_type="user_withdrawals")
+
+                    update_cleared_uncleared_bal(
+                        merchant=selected_ma["merchant"]["UID"], status="uncleared", amount=amt)
+                    tx_obj = TransactionsTable.objects.get(
+                        id=memo)
+                    assign_transaction_to_merchant(
+                        transaction=tx_obj, merchant=selected_ma["merchant"]["UID"])
+                    Notifications(
+                        selected_ma["merchant"]["email"], "Pending Transaction", "You have a pending transaction")
+
+
                 else:
                     pass
-            elif event_transaction_type == "user_withdrawals":
-                # print("user_withdrawals")
-
-                # merchant_list = get_all_merchant_object()
-                # print(merchant_list[0])
-                # # _merchant_obj = {}
-                # # _merchant_obj["id"] =
-                # for i in merchant_list:
-                #     print(i)
-
-                return True, amt
-                
-                # try:
-                #     adc = merchants_to_process_transaction(
-                #         merchants=merchant_list, tx_amount=amt, bank=None, transaction_type="user_withdrawals")
-                #     # add the transaction to a merchant pending tx
-                #     # notify merchant
-                #     # end of tx
-                #     print(memo)
-                # except Exception as e:
-                #     print(e)
-                #     #Notify admin
-                #     print("this is a critical error")
-                #     pass
-                # else:
-                #     # assign_transaction_to_merchant
-                #     transaction = get_transaction_By_Id(memo)
-                #     assign_transaction_to_merchant(
-                #         transaction=transaction, merchant=memo)
-                #     # notify merchant
-                #     Notifications(adc.email, "Pending Transaction", "You have a pending transaction")
-            else:
+            except Exception as e:
+                print(e)
                 pass
-                
+                    
 
         else:
             pass
-    except Exception as e:
-        print(e)
-        # // Add a way to send notification for error to admin group
-        return
+   
 
 
 # def is_user_withdrawal_memo_valid(hash:str, tx_memo):

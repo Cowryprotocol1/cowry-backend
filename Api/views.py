@@ -585,24 +585,13 @@ class EventListener(APIView):
                 else:
                     return Response({"error": "Invalid memo"}, status=status.HTTP_400_BAD_REQUEST)
             elif event_type == "user_withdrawals":
-                check_object = isTransaction_Valid(request.data.get("hash"), request.data.get(
+                isTransaction_Valid(request.data.get("hash"), request.data.get(
                     "memo"), _address=STABLECOIN_ISSUER, _asset_code=STABLECOIN_CODE, _asset_issuer=STABLECOIN_ISSUER, event_transaction_type="user_withdrawals")
-                if check_object:
-                    if check_object[0] == True:
-                        merchants_list = TokenTableSerializer(
-                            all_merchant_token_bal(), many=True)
-
-                        selected_ma = merchants_to_process_transaction(merchants_list.data,tx_amount=check_object[1], bank=None, transaction_type="user_withdrawals")
-                    
-                        update_cleared_uncleared_bal(merchant=selected_ma["merchant"]["UID"], status="uncleared", amount=check_object[1])
-                        tx_obj = TransactionsTable.objects.get(id=request.data.get('memo'))
-                        assign_transaction_to_merchant(transaction=tx_obj, merchant=selected_ma["merchant"]["UID"])
-                        # print(selected_ma)
-                        # print(selected_ma.email)
-                        Notifications(selected_ma["merchant"]["email"], "Pending Transaction", "You have a pending transaction")
-
-                    
-                return Response(serializeEvent.validated_data, status=status.HTTP_200_OK)
+            else:
+                pass
+                
+        
+            return Response(serializeEvent.validated_data, status=status.HTTP_200_OK)
 
             
 
