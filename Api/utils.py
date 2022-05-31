@@ -17,7 +17,6 @@ from modelApp.models import TransactionsTable
 from modelApp.utils import update_cleared_uncleared_bal
 
 STAKING_ADDRESS = config("STAKING_ADDRESS")
-STAKING_ADDRESS_SIGNER = config("STAKING_ADDRESS_SIGNER")
 STAKING_TOKEN_CODE = config("STAKING_TOKEN_CODE")
 STAKING_TOKEN_ISSUER = config("STAKING_TOKEN_ISSUER")
 

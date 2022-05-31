@@ -143,32 +143,7 @@ def is_Asset_trusted(address: str, asset_number=2, issuerAddress=ALLOWED_AND_LIC
         return False
 
 
-def add_signer_to_acct(signer: str, account_address: str, memo="added signer to account") -> Dict:
-    """
-    Function to add signer to an address
-    change an account to multisig
-    multisig allow an address to be control by multiple addresses
 
-    """
-    signer_keypair = Keypair.from_secret(signer)
-    server = get_horizon_server()
-    base_fee = server.fetch_base_fee()
-    account = server.load_account(signer_keypair.public_key)
-    delegated_signer = Signer.ed25519_public_key(account_address, weight=1)
-    transaction = (TransactionBuilder(
-        source_account=account,
-        base_fee=base_fee,
-        network_passphrase=get_network_passPhrase()
-    ).add_text_memo(memo_text=memo).append_set_options_op(
-        low_threshold=1,
-        med_threshold=1,
-        high_threshold=2,
-        master_weight=2,
-        signer=delegated_signer
-    ).set_timeout(30).build())
-    transaction.sign(signer_keypair)
-    submitted_transaction = server.submit_transaction(transaction)
-    return submitted_transaction
 
 
 def send_Allowed_and_license_token(recipient_address: str, amount: int, memo="MA Onboarding") -> str:
