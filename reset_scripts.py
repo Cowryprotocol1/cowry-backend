@@ -12,30 +12,12 @@ from Blockchains.Stellar.operations import get_horizon_server, get_network_passP
 # need model to holds all pending merchant off boarding XDR for signing by other signers
 # add tie breaker to signers
 
-# Keys_to_create = {}
-# Keys_to_create["STAKING_ADDRESS_SIGNER"] = "SCS7KACYXP24Z6UDVSJVTASTGFHNBFZ4PWZJG3GMXKRWAWK7V5IIXTQZ"
-# Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = "SCQDO2WYMJNPULBVXE5FF5A4GTJ4OMLBI5YSZ5F27LP4IBJP2SKKOP55"
-# Keys_to_create["STABLECOIN_ASSET_SIGNER"] = "SDSFQBN5YCCM3SQWBFLLFTSSAXND5YXSICXGGGN7RFOPKLFCWQDZEB3D"
-# Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = "SBQO5TAQIRB4E2SDOHEDGQFF66UXASUNRECRLZX53NE64QRSGLOS2K63"
-# Keys_to_create["PROTOCOL_SIGNER"] = "SAOO3ZHXMI53DKEA5K5RRNAHUTKZ24WLV22FMPGLYOKO2BGYWQQVJW3O"
-
-
 Keys_to_create = {}
-# Keys_to_create["STAKING_ADDRESS_SIGNER"] = "SDKDNRKZ52PJSTIHLTNENT7M43GUQDYJK6BJSGUG4SCXYHO72XAYCZMA"
-# Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = "SACLPGXRO7BKZY52Q37SSMEVFRTP7LFQCYY6H4NTMNBOBK6VPHUTPUHS"
-# Keys_to_create["STABLECOIN_ASSET_SIGNER"] = "SBY2C6LRWCERWAJFYAL37FRXUEOINMO4CWSY7U3X6QZZDQWY272FND4N"
-# Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = "SASA4QP3I2I3O2MPQ5DUZHNZJGBBPI7RW5BYXA5LAFT2WT6VOELXYVUX"
-# Keys_to_create["PROTOCOL_SIGNER"] = "SARPIHFU3G2MUV3OXDIYUBO72SCEGQ4AAO4JSVGLATRVEH6PZKUQJ347"
-
-
-Keys_to_create["STAKING_ADDRESS_SIGNER"] = "SCKYICHZNNGQCFJYIBVLNIC2P5AK7HUILL6EH2LVIGJONRMJ5P2EENKX"
-Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = "SAMGOSA222GCTGSWXMY6JCPDAML2XPUNSCP2YHPLJE33WL3I4M3G4CDA"
-Keys_to_create["STABLECOIN_ASSET_SIGNER"] = "SCSHIWNIUMNM5NLZNERQAS5XNADLG4YGNQ6P2OI6P6XJZ2VBOJHEVHKA"
-Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = "SABK6B4IEKQNPXST3LDIYN4PMU7UWR2IDPOQLKTWEJ4ZEDFHB4K2QOHM"
-Keys_to_create["PROTOCOL_SIGNER"] = "SA5LTWDTW7YRH6TDOARBMNH6YRW4TJMJBAGJYWROFDOHQIV3PROCRNHQ"
-Keys_to_create["PROTOCOL_SIGNER_2nd"] = "SCIELS25EJY7NCQ76OQOJCNVE2LQJ6OD45OFBKI6Z3FI5DYEQZENQXNC"
-
-# print(list(Keys_to_create.keys())[0])
+Keys_to_create["STAKING_ADDRESS_SIGNER"] = "SCS7KACYXP24Z6UDVSJVTASTGFHNBFZ4PWZJG3GMXKRWAWK7V5IIXTQZ"
+Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = "SCQDO2WYMJNPULBVXE5FF5A4GTJ4OMLBI5YSZ5F27LP4IBJP2SKKOP55"
+Keys_to_create["STABLECOIN_ASSET_SIGNER"] = "SDSFQBN5YCCM3SQWBFLLFTSSAXND5YXSICXGGGN7RFOPKLFCWQDZEB3D"
+Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = "SBQO5TAQIRB4E2SDOHEDGQFF66UXASUNRECRLZX53NE64QRSGLOS2K63"
+Keys_to_create["PROTOCOL_SIGNER"] = "SAOO3ZHXMI53DKEA5K5RRNAHUTKZ24WLV22FMPGLYOKO2BGYWQQVJW3O"
 
 
 first_address = "SCCDLNNTMPGTLFRXLIS6QO4X7UGXBR6FSD5HAQJ47NQA6F24HWYF46CE"
@@ -52,7 +34,8 @@ def create_a_valid_blockchain_account(pub_key: str):
         return pub_key
     else:
         pass
-    # raise Exception("Error creating a valid blockchain account")
+
+    
 # uncommet this part to recreate those account on testnet
 
 # for i in range(len(Keys_to_create)):
@@ -63,8 +46,7 @@ def create_a_valid_blockchain_account(pub_key: str):
 #     print(list(Keys_to_create.values())[i], "Has been successfully created")
 
 
-# print(Keypair.from_secret(
-#     "SBQO5TAQIRB4E2SDOHEDGQFF66UXASUNRECRLZX53NE64QRSGLOS2K63").public_key)
+
 def add_signer_to_acct(signer: str, account_address: str, memo="added signer to account") -> Dict:
     """
     Function to add signer to an address
@@ -115,10 +97,14 @@ class DAO_SETUP():
         protocol_signer_for_allowedLicense_address = Signer.ed25519_public_key(
             Keypair.from_secret(Keys_to_create["PROTOCOL_SIGNER"]).public_key, weight=100)
 
-        delegated_signer_added_to_allowedLicense_address = Signer.ed25519_public_key(
-            Keypair.from_secret(Keys_to_create["DELEGATED_SIGNER_ADDRESS"]).public_key, weight=50)
+        protocol_signer_for_delegated_address = Signer.ed25519_public_key(
+            Keypair.from_secret(Keys_to_create["PROTOCOL_SIGNER"]).public_key, weight=100)
+
         protocol_signer_for_stablecoin_address = Signer.ed25519_public_key(
             Keypair.from_secret(Keys_to_create["PROTOCOL_SIGNER"]).public_key, weight=100)
+
+        delegated_signer_added_to_allowedLicense_address = Signer.ed25519_public_key(
+            Keypair.from_secret(Keys_to_create["DELEGATED_SIGNER_ADDRESS"]).public_key, weight=50)
         
        
         daoTransaction = (TransactionBuilder(
@@ -158,6 +144,14 @@ class DAO_SETUP():
             master_weight=0,
             signer=protocol_signer_for_stablecoin_address,
             source=Keypair.from_secret(Keys_to_create["STABLECOIN_ASSET_SIGNER"]).public_key
+        ).append_set_options_op(
+            low_threshold=50,
+            med_threshold=50,
+            high_threshold=80,
+            master_weight=50,
+            signer=protocol_signer_for_delegated_address,
+            source=Keypair.from_secret(
+                Keys_to_create["DELEGATED_SIGNER_ADDRESS"]).public_key
         ).set_timeout(30).build())
 
         daoTransaction.sign(Keypair.from_secret(Keys_to_create["PROTOCOL_SIGNER"]))
@@ -171,35 +165,13 @@ class DAO_SETUP():
         daoTransaction.sign(Keypair.from_secret(
             Keys_to_create["STABLECOIN_ASSET_SIGNER"]))
 
+        daoTransaction.sign(Keypair.from_secret(
+            Keys_to_create["DELEGATED_SIGNER_ADDRESS"]))
+
         submitted_transaction = get_horizon_server().submit_transaction(daoTransaction)
         # print(submitted_transaction)
         return submitted_transaction
 
-    def add_signer_to_dao(self):
-        IFP_ACCT = Signer.ed25519_public_key(
-            Keypair.from_secret(Keys_to_create["PROTOCOL_SIGNER_2nd"]).public_key, weight=60)
-        add_2nd_signer = (TransactionBuilder(
-            source_account=self.load_src,
-            base_fee=get_horizon_server().fetch_base_fee(),
-            network_passphrase=get_network_passPhrase()
-        ).add_text_memo(memo_text="add signer to Protocol addr"
-        ).append_set_options_op(
-            low_threshold=50,
-            med_threshold=60,
-            high_threshold=80,
-            master_weight=40,
-            signer=IFP_ACCT,
-            source=Keypair.from_secret(
-                Keys_to_create["PROTOCOL_SIGNER"]).public_key
-            # adding the protocol address as the master signer for the allowed and license address
-        ).set_timeout(30).build())
-
-        add_2nd_signer.sign(Keypair.from_secret(
-            Keys_to_create["PROTOCOL_SIGNER"]))
-        add_2nd_signer.sign(Keypair.from_secret(
-            Keys_to_create["PROTOCOL_SIGNER_2nd"]))
-        add_2nd_signer_=get_horizon_server().submit_transaction(add_2nd_signer)
-        return add_2nd_signer_
 
 
 
@@ -207,6 +179,6 @@ class DAO_SETUP():
 
 
 
-print("starting dao setup")
-dao_step_1 = DAO_SETUP()
-print(dao_step_1.add_signer_to_dao())
+# print("starting dao setup")
+# dao_step_1 = DAO_SETUP()
+# print(dao_step_1.add_protocol_to_address())
