@@ -43,7 +43,6 @@ from .utils import (PROTOCOL_COMMISSION, STAKING_TOKEN_ISSUER, Notifications,
 STAKING_TOKEN = config("STAKING_TOKEN_CODE")
 STAKING_ADDRESS = config("STAKING_ADDRESS")
 GENERAL_TRANSACTION_FEE = config("GENERAL_TRANSACTION_FEE")
-ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER = config("ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER")
 
 
 
@@ -176,7 +175,7 @@ class ON_RAMP_FIAT_USERS(APIView):
 
                         return Response(data=data, status=status.HTTP_200_OK)
                 else:
-                    return Response(data={"error": "No merchant found", "message": "try a lower amount"}, status=status.HTTP_404_NOT_FOUND)
+                    return Response(data={"error": "No merchant found", "message": "There might be no merchant registered on the Protocol yet or you are entering a very high amount"}, status=status.HTTP_404_NOT_FOUND)
             else:
                 assets = [{"code": STAKING_TOKEN, "issuer": STAKING_ADDRESS}]
                 return Response({
