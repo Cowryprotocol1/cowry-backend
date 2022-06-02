@@ -170,8 +170,8 @@ def send_and_authorize_allowed_and_license_token_existing_address(recipient: str
 
 
 def manage_buy_order(signer_key: str, buying_asset_code, buying_asset_issuer, amount,
-                     selling_asset_code, selling_asset_issuer, starting_price_per_unit,
-                     offerId=0):
+                    selling_asset_code, selling_asset_issuer, starting_price_per_unit,
+                    offerId=0):
 
     base_fee = get_horizon_server().fetch_base_fee()
     keypair_sender = Keypair.from_secret(signer_key)
@@ -187,9 +187,9 @@ def manage_buy_order(signer_key: str, buying_asset_code, buying_asset_issuer, am
         base_fee=base_fee,
         network_passphrase=get_network_passPhrase()
     ).add_text_memo(memo_text="Manage buy order"
-                    ).append_manage_sell_offer_op(selling=selling_asset, buying=buying_asset,
-                                                  amount=str_amount, price=unit_price, offer_id=offerId,
-                                                  source=keypair_sender.public_key).build()
+    ).append_manage_sell_offer_op(selling=selling_asset, buying=buying_asset,
+    amount=str_amount, price=unit_price, offer_id=offerId,
+    source=keypair_sender.public_key).build()
 
     # sign transaction
     manage_buy_order_tx.sign(keypair_sender)

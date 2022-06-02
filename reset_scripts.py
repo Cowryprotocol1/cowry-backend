@@ -5,8 +5,8 @@ from typing import Dict
 
 from Blockchains.Stellar.operations import get_horizon_server, get_network_passPhrase
 
-# include funcion to place a sell order for allowed token against stablecoin
-# include function to add trustlines for assets
+# include function to place a sell order for allowed token against stablecoin
+# include function to add trustline for assets
 # include function to re-create all asset
 # handle resetting of signature weight for adding new signers
 # need model to holds all pending merchant off boarding XDR for signing by other signers
