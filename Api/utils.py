@@ -1,6 +1,9 @@
 import random
-import secrets
+import secrets, time
+
 from typing import List
+# from stablecoin.celery import app as celery_app
+from celery import shared_task
 
 import requests
 from Blockchains.Stellar.operations import (STABLECOIN_CODE, STABLECOIN_ISSUER,
@@ -52,11 +55,11 @@ def amount_to_naira(amount):
 
 # to be used inside model before saving
 
+# @celery_app.task(bind=True)
+@shared_task
 def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRESS, _asset_code=STAKING_TOKEN_CODE, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking") -> bool:
     # check transaction status and return needed data using 
     # Check transaction hash has not been processed before
-
-  
     server = get_horizon_server()
 
     try:
@@ -108,14 +111,19 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
                     selected_ma = merchants_to_process_transaction(
                         merchants_list.data, tx_amount=amt, bank=None, transaction_type="user_withdrawals")
 
-                    update_cleared_uncleared_bal(
-                        merchant=selected_ma["merchant"]["UID"], status="uncleared", amount=amt)
-                    tx_obj = TransactionsTable.objects.get(
-                        id=memo)
-                    assign_transaction_to_merchant(
-                        transaction=tx_obj, merchant=selected_ma["merchant"]["UID"])
-                    Notifications(
-                        selected_ma["merchant"]["email"], "Pending Transaction", "You have a pending transaction")
+                    # print(selected_ma)
+                    if selected_ma != False:
+
+                        update_cleared_uncleared_bal(
+                            merchant=selected_ma["merchant"]["UID"], status="uncleared", amount=amt)
+                        tx_obj = TransactionsTable.objects.get(
+                            id=memo)
+                        assign_transaction_to_merchant(
+                            transaction=tx_obj, merchant=selected_ma["merchant"]["UID"])
+                        Notifications(
+                            selected_ma["merchant"]["email"], "Pending Transaction", "You have a pending transaction")
+                    else:
+                        pass
 
 
                 else:

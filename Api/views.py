@@ -55,6 +55,9 @@ def index(requests):
 
 
 class OnBoardMA(APIView):
+    """
+    Endpoint to onboard a merchant
+    """
     def get(self, request):
        
         data = {"test": "test"}
@@ -578,14 +581,18 @@ class EventListener(APIView):
                 check_memo = is_transaction_memo_valid(request.data.get("memo"))
                 if check_memo == True:
                     # pass transaction to isTransaction_Valid, which check the transaction hash
-                    isTransaction_Valid(request.data.get(
+                    isTransaction_Valid.delay(request.data.get(
                         "hash"), request.data.get("memo"))
+                
+                    
+                    # isTransaction_Valid()
                     return Response(serializeEvent.validated_data, status=status.HTTP_200_OK)
                 else:
                     return Response({"error": "Invalid memo"}, status=status.HTTP_400_BAD_REQUEST)
             elif event_type == "user_withdrawals":
-                isTransaction_Valid(request.data.get("hash"), request.data.get(
+                isTransaction_Valid.delay(request.data.get("hash"), request.data.get(
                     "memo"), _address=STABLECOIN_ISSUER, _asset_code=STABLECOIN_CODE, _asset_issuer=STABLECOIN_ISSUER, event_transaction_type="user_withdrawals")
+            
             else:
                 pass
                 

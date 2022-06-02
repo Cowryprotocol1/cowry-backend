@@ -25,23 +25,22 @@ class Deployment():
         self.Genesis_acct = "SD5VCJH63MEYL45YTAAXPRTT5TY3N37ZDMECHN4OKJ6E3IHQLDJC3Z6G"
 
 
-        # self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = config(
-        #     "STAKING_ADDRESS_SIGNER")
-        # self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = config(
-        #     "ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER")
-        # self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = config(
-        #     "STABLECOIN_ASSET_SIGNER")
-        # self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = config(
-        #     "DELEGATED_SIGNER_ADDRESS")
-        # self.Keys_to_create["PROTOCOL_SIGNER"] = config("PROTOCOL_SIGNER")
-        # self.Keys_to_create["GENESIS_SIGNER"] = config("GENESIS_SIGNER")
+        self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = config(
+            "STAKING_ADDRESS_SIGNER")
+        self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = config(
+            "ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER")
+        self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = config(
+            "STABLECOIN_ASSET_SIGNER")
+        self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = config(
+            "DELEGATED_SIGNER_ADDRESS")
+        self.Keys_to_create["PROTOCOL_SIGNER"] = config("PROTOCOL_SIGNER")
 
-        self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = Keypair.random().secret
-        self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = Keypair.random().secret
-        self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = Keypair.random().secret
-        self.Keys_to_create["PROTOCOL_SIGNER"] = Keypair.random().secret
-        # self.Keys_to_create["GENESIS_SIGNER"] = "SD5VCJH63MEYL45YTAAXPRTT5TY3N37ZDMECHN4OKJ6E3IHQLDJC3Z6G"
-        self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = Keypair.random().secret
+        # self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = Keypair.random().secret
+        # self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = Keypair.random().secret
+        # self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = Keypair.random().secret
+        # self.Keys_to_create["PROTOCOL_SIGNER"] = Keypair.random().secret
+        # # self.Keys_to_create["GENESIS_SIGNER"] = "SD5VCJH63MEYL45YTAAXPRTT5TY3N37ZDMECHN4OKJ6E3IHQLDJC3Z6G"
+        # self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = Keypair.random().secret
 
         if self.NETWORK == "testnet":
             self.server = Server("https://horizon-testnet.stellar.org")
@@ -249,9 +248,9 @@ class Deployment():
             base_fee=base_fee,
             network_passphrase=self._networkPassPhrase
         ).add_text_memo(memo_text="Manage buy order"
-                        ).append_manage_sell_offer_op(selling=selling_asset, buying=buying_asset,
-                                                      amount=str_amount, price=unit_price, offer_id=offerId,
-                                                      source=keypair_sender.public_key).build()
+        ).append_manage_sell_offer_op(selling=selling_asset, buying=buying_asset,
+        amount=str_amount, price=unit_price, offer_id=offerId,
+        source=keypair_sender.public_key).build()
 
         # sign transaction
         manage_buy_order_tx.sign(keypair_sender)
