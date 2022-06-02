@@ -17,7 +17,7 @@ from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-os.environ["REDIS_URL"] = config("CELERY_BROKER_URL")
+# os.environ["REDIS_URL"] = config("CELERY_BROKER_URL")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
@@ -165,5 +165,6 @@ CELERY_RESULT_BACKEND = os.environ.get('REDIS_TLS_URL')
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
+CELERY_SSL_CERT_REEQS=None
 
 
