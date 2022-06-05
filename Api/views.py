@@ -7,7 +7,7 @@ from Blockchains.Stellar.operations import (
     ALLOWED_AND_LICENSE_P_ADDRESS, ALLOWED_TOKEN_CODE, LICENSE_TOKEN_CODE,
     LICENSE_TOKEN_ISSUER, PROTOCOL_FEE_ACCOUNT, STABLECOIN_CODE,
     STABLECOIN_ISSUER, STAKING_ADDRESS, OffBoard_Merchant_with_Burn,
-    User_withdrawal_from_protocol, get_network_passPhrase, is_Asset_trusted,
+    User_withdrawal_from_protocol, get_network_passPhrase, is_Asset_trusted, get_horizon_server,
     merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor)
 from Blockchains.Stellar.utils import check_address_balance
 from decouple import config
@@ -575,6 +575,49 @@ class MerchantDepositConfirmation(APIView):
 
         pass
 
+
+class AllTokenTotalSupply(APIView):
+    """
+    Endpoint to get all token supply
+    """
+    def get(self, request):
+        server = get_horizon_server()
+
+        accts = {
+                
+                ALLOWED_AND_LICENSE_P_ADDRESS: LICENSE_TOKEN_CODE, 
+                STABLECOIN_ISSUER: STABLECOIN_CODE,
+
+                }
+        # allowed_issuer = ALLOWED_AND_LICENSE_P_ADDRESS
+        # accts[allowed_issuer] = ALLOWED_TOKEN_CODE
+       
+        _asset_supply = {}
+        for i in range(len(accts)):
+            _keys = list(accts.keys())[i]
+            _values = list(accts.values())[i]
+            try:
+                bala = server.assets().for_code(_values).for_issuer(_keys).call()
+                for i in bala['_embedded']['records']:
+                    _asset_supply[_values] = {
+                        "total_accounts": i["accounts"], "total_balance": i["balances"]}
+                
+            except Exception as E:
+                print(E)
+                return Response({"error": f"getting details for this endpoint"}, status=status.HTTP_404_NOT_FOUND)
+        
+        return Response(_asset_supply, status=status.HTTP_200_OK)
+
+
+        #supply of allowed Token
+        #supply of licxense token
+        # supply of stablecoin
+        # total amount in staking vault
+
+
+        # token_supply = TokenSupply.objects.all()
+        # serializer = TokenSupplySerializer(token_supply, many=True)
+        return Response("ok", status=status.HTTP_200_OK)
 class EventListener(APIView):
     def post(self, request):
         serializeEvent = EventSerializer(data=request.data)
