@@ -629,7 +629,7 @@ class EventListener(APIView):
                 check_memo = is_transaction_memo_valid(request.data.get("memo"))
                 if check_memo == True:
                     # pass transaction to isTransaction_Valid, which check the transaction hash
-                    isTransaction_Valid.delay(request.data.get(
+                    isTransaction_Valid(request.data.get(
                         "hash"), request.data.get("memo"))
                 
                     
@@ -638,7 +638,7 @@ class EventListener(APIView):
                 else:
                     return Response({"error": "Invalid memo"}, status=status.HTTP_400_BAD_REQUEST)
             elif event_type == "user_withdrawals":
-                isTransaction_Valid.delay(request.data.get("hash"), request.data.get(
+                isTransaction_Valid(request.data.get("hash"), request.data.get(
                     "memo"), _address=STABLECOIN_ISSUER, _asset_code=STABLECOIN_CODE, _asset_issuer=STABLECOIN_ISSUER, event_transaction_type="user_withdrawals")
             
             else:
