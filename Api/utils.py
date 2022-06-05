@@ -56,7 +56,7 @@ def amount_to_naira(amount):
 
 
 # to be used inside model before saving
-@shared_task
+# @shared_task
 def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRESS, _asset_code=STAKING_TOKEN_CODE, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking") -> bool:
     # check transaction status and return needed data using 
     # Check transaction hash has not been processed before
@@ -186,7 +186,6 @@ def Notifications(recipient_email, subject, message):
 # print(mail.content.decode("utf-8"))
 
 # # print(get_all_merchant_object())
-# acc = isTransaction_Valid("5de5bc0f18ec40d39d75293d13eb081807ee2ad231542571cff22827c5c484a6", "200525514585", _address=STABLECOIN_ISSUER,
-#                           _asset_code=STABLECOIN_CODE, _asset_issuer=STABLECOIN_ISSUER, event_transaction_type="user_withdrawals")
+# acc = isTransaction_Valid("4f46f3321ffc0522b7a6fee76282e89bdae9b84cecd441b2111084f750542429", "f9b31c75ea3b8c1f83a9")
 
 # print(acc)
