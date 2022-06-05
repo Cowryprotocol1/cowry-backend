@@ -13,6 +13,7 @@ from .test_setup import (TestSetUpClass, allowed_asset, allowed_asset_issuer,
                         staking_asset_code, staking_asset_issuer, license_token_issuer, stablecoin_issuer)
 
 from modelApp.utils import assign_transaction_to_merchant, update_PendingTransaction_Model
+from utils.utils import Id_generator
 class Merchants_Class_Test(TestSetUpClass):
 
     def test_merchant_with_no_trustline_for_all_assets(self):
@@ -34,7 +35,7 @@ class Merchants_Class_Test(TestSetUpClass):
     def test_onBoardMerchant_all_required_trustline(self):
         present_user = MerchantsTable.objects.get(UID=self.created_user.UID)
         present_user.delete()
-        self._data["blockchainAddress"] = "GBXR3CBYCDW63FCPH3TCDTLS54S73JU6SDDTZAMCXPCXCNRIPE4XXJYF"
+        self._data["blockchainAddress"] = self.merchant_keypair.public_key
         self.url = reverse('onboard')
         response = self.client.post(self.url, self._data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -75,7 +76,8 @@ class Merchants_Class_Test(TestSetUpClass):
 
         self.assertEqual(req_data.status_code, status.HTTP_200_OK)
         self.assertTrue("raw_xdr" in req_data.data)
-        self.assertTrue(req_data.data["message"] == 'Please sign and submit the XDR below to complete the transaction')
+        self.assertTrue(
+            req_data.data["message"] == 'Please sign and submit the XDR below within 30min to complete the transaction')
 
     def test_off_boarding_merchant_with_enough_balance_2nd_transaction(self):
         self._ma_data = {
@@ -204,10 +206,11 @@ class Merchants_Class_Test(TestSetUpClass):
         transactionEnvelop = TransactionEnvelope.from_xdr(
             xdr_object, get_network_passPhrase())
         operations = transactionEnvelop.transaction.operations
+      
         self.assertTrue(type(operations[6]) == Payment)
         self.assertTrue(operations[6].destination.account_id == self._ma_data["merchant_PubKey"])
-        self.assertTrue(operations[6].asset.code == stablecoin)
-        self.assertTrue(operations[6].asset.issuer == stablecoin_issuer)
+        self.assertTrue(operations[6].asset.code == staking_asset_code)
+        self.assertTrue(operations[6].asset.issuer == staking_asset_issuer)
         self.assertTrue(int(operations[6].amount) == 100)
         self.assertTrue(operations[6].source.account_id == staking_address )
 
@@ -243,21 +246,21 @@ class Merchants_Class_Test(TestSetUpClass):
 
     def test_get_all_merchant_pending_transactions_with_valid_parament(self):
 
-        for i in range(10):
-            transaction_p = update_PendingTransaction_Model(
-                transaction_amt=self.user_withdrawal["amount"],
-                transaction_type='withdraw',
-                transaction_hash=None,
-                user_block_address=self.created_user.blockchainAddress,
-                phone_num=self.user_withdrawal["phone_number"],
-                user_bank_account=self.user_withdrawal["account_number"],
-                bank_name=self.user_withdrawal["bank_name"],
-                narration=self.random_string(10),
+        # for i in range(10):
+        transaction_p = update_PendingTransaction_Model(
+            transaction_amt=self.user_withdrawal["amount"],
+            transaction_type='withdraw',
+            transaction_hash=None,
+            user_block_address=self.created_user.blockchainAddress,
+            phone_num=self.user_withdrawal["phone_number"],
+            user_bank_account=self.user_withdrawal["account_number"],
+            bank_name=self.user_withdrawal["bank_name"],
+            narration=self.random_string(10),
 
-            )
-            transaction_p.save()
-            assign_transaction_to_merchant(
-                transaction=transaction_p, merchant=self.created_user.UID)
+        )
+        transaction_p.save()
+        assign_transaction_to_merchant(
+            transaction=transaction_p, merchant=self.created_user.UID)
 
 
         self._ma_data = {"merchant_public_key": transaction_p.users_address}
@@ -267,5 +270,5 @@ class Merchants_Class_Test(TestSetUpClass):
             self._ma_data), content_type='application/json')
 
         self.assertEqual(req_data.status_code, 200)
-        self.assertTrue(len(req_data.data) == 10)
+        self.assertTrue(len(req_data.data) == 1)
 

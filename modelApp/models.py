@@ -4,6 +4,7 @@ from django.db import models
 from utils.utils import uidGenerator
 from Blockchains.Stellar.operations import is_account_valid  
 from rest_framework import serializers
+from utils.utils import Id_generator
 # Create your models here.
 
 
@@ -58,6 +59,7 @@ class TransactionsTable(models.Model):
     # This would hold details about a merchant and the amount of transaction to merchant has in pending
     # details should include the recipient address, the merchants object, amount pending
     merchant = models.ManyToManyField(MerchantsTable)
+    id = models.CharField(max_length=128, primary_key=True, default=Id_generator())
     users_address = models.CharField(max_length=128, blank=True, null=True)
     user_phone = models.CharField(max_length=128, blank=True, null=True)
     user_email = models.CharField(max_length=128, blank=True, null=True)

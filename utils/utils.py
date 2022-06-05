@@ -16,8 +16,11 @@ def createStellarAddress():
 
 
 def Id_generator():
-    id = randint(1, 9999999999)
-    return "200"+str(id)
+    range_start = 10**(8-1)
+    range_end = (10**8)-1
+    numbers = randint(range_start, range_end)
+    return "200"+str(numbers)
+   
 
 
 # def createOnchainAsset(asset_code, asset_issuer) -> Asset:

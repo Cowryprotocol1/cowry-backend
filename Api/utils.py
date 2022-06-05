@@ -28,6 +28,8 @@ GOVERNANCE_TOKEN_CODE = "GToken"
 GENERAL_TRANSACTION_FEE = config("GENERAL_TRANSACTION_FEE")
 PROTOCOL_COMMISSION = config("PROTOCOL_COMMISSION")
 
+IFP_STAKE_MINT_VALUE = 0.9 #90% 
+
 PROTOCOL_FEE =  float(GENERAL_TRANSACTION_FEE) * float(PROTOCOL_COMMISSION)
 # in naira
 
@@ -48,14 +50,12 @@ def amount_to_naira(amount):
         price = round(float(response.json()["price"]), 7)
         naira_amount = round(float(amount) * float(price), 7)
 
-        to_mint_amt = naira_amount / 2
+        to_mint_amt = naira_amount * IFP_STAKE_MINT_VALUE
         return [to_mint_amt, price]
     return
 
 
 # to be used inside model before saving
-
-# @celery_app.task(bind=True)
 @shared_task
 def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRESS, _asset_code=STAKING_TOKEN_CODE, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking") -> bool:
     # check transaction status and return needed data using 
