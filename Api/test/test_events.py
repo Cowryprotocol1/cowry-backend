@@ -8,6 +8,8 @@ class EventTest(TestSetUpClass):
 
 
     def test_events(self):
+        # Testnet can be reset and hash will no longer be valid
+        # this endpoint will always return 200, based the celery task we are using
         data = {
             "hash": "5de5bc0f18ec40d39d75293d13eb081807ee2ad231542571cff22827c5c484a6",
             "memo": "200525514585",

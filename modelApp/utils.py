@@ -94,7 +94,7 @@ def return_all_objects_for_a_merchants(merchant: str) -> QuerySet:
 def update_pending_transaction_model(merchant: str, transaction_amt: str, transaction_type: str, narration:str, transaction_hash=None, transaction_memo=None, user_block_address=None, phone_num=None, email=None, user_bank_account=None, bank_name=None):
     merchant_obj = MerchantsTable.objects.get(UID=merchant)
     if transaction_type == "deposit":
-        a1 = TransactionsTable(users_address=user_block_address, transaction_hash=transaction_hash, transaction_type=transaction_type, transaction_amount=transaction_amt, transaction_narration=narration)
+        a1 = TransactionsTable(id=Id_generator(), users_address=user_block_address, transaction_hash=transaction_hash, transaction_type=transaction_type, transaction_amount=transaction_amt, transaction_narration=narration)
         a1.save()
         a1.merchant.add(merchant_obj)
         return a1

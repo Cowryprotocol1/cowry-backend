@@ -107,7 +107,7 @@ def send_and_authorize_allowed_and_license_token_new_address(recipient: str, mem
     """
     base_fee = get_horizon_server().fetch_base_fee()
     authorizer_of_tx = Keypair.from_secret(
-        6)
+        DELEGATED_SIGNER_ADDRESS)
     # sender_keypair = Keypair.from_secret(sender_key)
     _asset_signer = Keypair.from_secret(asset_signer)
 
@@ -122,13 +122,13 @@ def send_and_authorize_allowed_and_license_token_new_address(recipient: str, mem
         base_fee=base_fee,
         network_passphrase=get_network_passPhrase()
     ).add_text_memo(memo_text=memo
-                    ).append_set_trust_line_flags_op(set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=recipient, asset=allow_asset, source=_asset_signer.public_key
-                                                     ).append_set_trust_line_flags_op(set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=recipient, asset=license_asset, source=_asset_signer.public_key
-                                                                                      ).append_payment_op(destination=recipient, amount=str(amount), asset=allow_asset, source=_asset_signer.public_key
-                                                                                                          ).append_payment_op(destination=recipient, amount=str(amount), asset=license_asset, source=_asset_signer.public_key
-                                                                                                                              ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG, set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, trustor=recipient, asset=allow_asset, source=_asset_signer.public_key
-                                                                                                                                                               ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG, set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, trustor=recipient, asset=license_asset, source=_asset_signer.public_key
-                                                                                                                                                                                                ).set_timeout(100).build()
+    ).append_set_trust_line_flags_op(set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=recipient, asset=allow_asset, source=_asset_signer.public_key
+    ).append_set_trust_line_flags_op(set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=recipient, asset=license_asset, source=_asset_signer.public_key
+    ).append_payment_op(destination=recipient, amount=str(amount), asset=allow_asset, source=_asset_signer.public_key
+    ).append_payment_op(destination=recipient, amount=str(amount), asset=license_asset, source=_asset_signer.public_key
+    ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG, set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, trustor=recipient, asset=allow_asset, source=_asset_signer.public_key
+    ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG, set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, trustor=recipient, asset=license_asset, source=_asset_signer.public_key
+    ).set_timeout(1800).build()
     burn_auth_payment.sign(authorizer_of_tx)
     submitted_tx = get_horizon_server().submit_transaction(burn_auth_payment)
     return submitted_tx
@@ -229,19 +229,19 @@ def merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor(
         base_fee=base_fee,
         network_passphrase=get_network_passPhrase()
     ).add_text_memo(memo_text=memo_text
-                    ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG,
-                                                     set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=trustorPub, asset=authorized_asset,
-                                                     source=keypair_sender.public_key
-                                                     ).append_manage_sell_offer_op(selling=selling_asset, buying=buying_asset,
-                                                                                   amount=str_amount, price=unit_price, offer_id=offerId,
-                                                                                   source=trustorPub
-                                                                                   ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG,
-                                                                                                                    set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG,
-                                                                                                                    trustor=trustorPub, asset=authorized_asset,
-                                                                                                                    source=keypair_sender.public_key
-                                                                                                                    ).append_payment_op(destination=depositor_pubKey, asset=buying_asset, amount=amount_minus_fee, source=trustorPub
-                                                                                                                                        ).append_payment_op(destination=PROTOCOL_FEE_ACCOUNT, asset=buying_asset, amount=str(round(protocol_fee, 7)), source=trustorPub
-                                                                                                                                                            ).build()
+).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG,
+set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=trustorPub, asset=authorized_asset,
+source=keypair_sender.public_key
+).append_manage_sell_offer_op(selling=selling_asset, buying=buying_asset,
+amount=str_amount, price=unit_price, offer_id=offerId,
+source=trustorPub
+).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG,
+set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG,
+trustor=trustorPub, asset=authorized_asset,
+source=keypair_sender.public_key
+).append_payment_op(destination=depositor_pubKey, asset=buying_asset, amount=amount_minus_fee, source=trustorPub
+            ).append_payment_op(destination=PROTOCOL_FEE_ACCOUNT, asset=buying_asset, amount=str(round(protocol_fee, 7)), source=trustorPub
+                                ).build()
 
     # sign transaction
     authorized_asset_tx.sign(authorizer_of_tx)
@@ -249,7 +249,7 @@ def merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor(
     return xdr_obj
 
 
-def OffBoard_Merchant_with_Burn(recipient_pub_key: str, amount: str, memo: str, exchange_rate: str, allowed_license_token_signer=ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER) -> XDR:
+def OffBoard_Merchant_with_Burn(recipient_pub_key: str, amount: str, memo: str, exchange_rate: str, total_staked_amt:str, allowed_license_token_signer=ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER) -> XDR:
     """
     this burn allowed and license token from a merchant account and also unstake the merchant staked token
     """
@@ -272,7 +272,10 @@ def OffBoard_Merchant_with_Burn(recipient_pub_key: str, amount: str, memo: str, 
     else:
         exchange_rate = exchange_rate
 
-    amount_to_unstake = round(float(amount) / float(exchange_rate), 7)
+    allowed_license_amt = round(float(amount) / float(exchange_rate), 7)
+    held_amt = float(total_staked_amt) - allowed_license_amt
+    # total_held_currency = allowed_license_amt + held_percentage
+    amount_to_unstake = float(allowed_license_amt) + float(held_amt)
 
     burn_auth_payment = TransactionBuilder(
         source_account=src_acct,
@@ -286,7 +289,7 @@ def OffBoard_Merchant_with_Burn(recipient_pub_key: str, amount: str, memo: str, 
     ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG, set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, trustor=recipient_pub_key, asset=allow_asset, source=_regulated_asset_signer.public_key
     ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG, set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, trustor=recipient_pub_key, asset=license_asset, source=_regulated_asset_signer.public_key
     ).append_payment_op(destination=recipient_pub_key, amount=str(amount_to_unstake), asset=staked_asset, source=STAKING_ADDRESS
-    ).set_timeout(100).build()
+    ).set_timeout(1800).build()
     burn_auth_payment.sign(authorizer_of_tx)
     burn_auth_payment.sign(_staking_address_signer)
 

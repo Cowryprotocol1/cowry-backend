@@ -1,13 +1,13 @@
 
 
 from stellar_sdk import TransactionEnvelope, Network, SetTrustLineFlags, Payment
-from Api.test.test_setup import TestSetUpClass
+from Api.test.test_setup import TestSetUpClass, allowed_asset, allowed_asset_issuer, license_token,license_token_issuer
 from Blockchains.Stellar.operations import Mint_Token
 
 
 class StellarFunctions(TestSetUpClass):
 
-    def test_1_minting_token_to_addr_with_trustline(self):
+    def test_minting_token_to_addr_with_trustline(self):
         memo = "test"
         send_amt = 1.5
         mint = Mint_Token(self.created_user.blockchainAddress, send_amt, memo)
@@ -27,9 +27,8 @@ class StellarFunctions(TestSetUpClass):
                         send_amt)
         self.assertTrue(float(operations[3].amount) ==
                         send_amt)
-        self.assertTrue(operations[2].asset.code == "NGNALLOW")
-        self.assertTrue(operations[2].asset.issuer ==
-                        "GDCPU5EEMTHDBJ4OUUBYS2OC4YZAO2YCF5AVXIU6CNCFOTAI67NQRIC5")
+        self.assertTrue(operations[2].asset.code == allowed_asset)
+        self.assertTrue(operations[2].asset.issuer == allowed_asset_issuer)
 
-        self.assertTrue(operations[3].asset.code == "NGNLICENSE")
-        self.assertTrue(operations[3].asset.issuer == "GDCPU5EEMTHDBJ4OUUBYS2OC4YZAO2YCF5AVXIU6CNCFOTAI67NQRIC5")
+        self.assertTrue(operations[3].asset.code == license_token)
+        self.assertTrue(operations[3].asset.issuer == license_token_issuer)

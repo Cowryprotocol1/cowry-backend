@@ -139,7 +139,8 @@ class ON_RAMP_FIAT_USERS(APIView):
         if check_data.is_valid():
             # check if the address has a trustline for the NGN asset
             is_asset_trusted = is_Asset_trusted(
-                blockchainAddress, 1, STAKING_ADDRESS)
+                blockchainAddress, 1, STABLECOIN_ISSUER)
+
             if is_asset_trusted == True:
                 merchants_list = TokenTableSerializer(
                     all_merchant_token_bal(), many=True)
@@ -154,6 +155,7 @@ class ON_RAMP_FIAT_USERS(APIView):
                             transaction_memo=MA_selected["merchant"]["UID"], phone_num=MA_selected["merchant"]["phoneNumber"], 
                             user_bank_account=MA_selected["merchant"]["bankAccount"], bank_name=MA_selected["merchant"]["bankName"], user_block_address=blockchainAddress)
                     except IntegrityError as e:
+                        print(e)
                         if 'UNIQUE constraint failed' in e.args[0]:
                             return Response({"error": "there is a pending payment with this narration, please update transaction narration"}, status=status.HTTP_400_BAD_REQUEST)
                         else:
@@ -180,9 +182,9 @@ class ON_RAMP_FIAT_USERS(APIView):
                 else:
                     return Response(data={"error": "No merchant found", "message": "There might be no merchant registered on the Protocol yet or you are entering a very high amount"}, status=status.HTTP_404_NOT_FOUND)
             else:
-                assets = [{"code": STAKING_TOKEN, "issuer": STAKING_ADDRESS}]
+                assets = [{"code": STAKING_TOKEN, "issuer": STAKING_TOKEN_ISSUER}, {"code": STABLECOIN_CODE, "issuer": STABLECOIN_ISSUER}]
                 return Response({
-                    "error": "your address must add trustline to the following assets",
+                    "error": f"your address must add trustline to the following assets and also have enough balance for {STAKING_TOKEN}",
                     "assets": assets}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"error": check_data.errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -285,11 +287,12 @@ class OFF_RAMP_FIAT(APIView):
                         ) 
                     
                     except IntegrityError as e:
-                            if 'UNIQUE constraint failed' in e.args[0]:
-                                return Response({"error": "there is a pending payment with this narration, please update transaction narration"}, status=status.HTTP_400_BAD_REQUEST)
-                            else:
-                                # notify admin
-                                return Response({"error": "something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
+                        print(e)
+                        if 'UNIQUE constraint failed' in e.args[0]:
+                            return Response({"error": "there is a pending payment with this narration, please update transaction narration"}, status=status.HTTP_400_BAD_REQUEST)
+                        else:
+                            # notify admin
+                            return Response({"error": "something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
                     else:
                         # update_cleared_uncleared_bal(
                         #     selected_ma["merchant"]["UID"], "uncleared", _data["amount"])
@@ -373,6 +376,7 @@ class OFF_RAMP_FIAT(APIView):
 
 class OFF_BOARDING_MA(APIView):
     def get(self, request):
+
         # ma thats want to offboard will call this endpoint with their UID and pub key
         # we need to check if the pub key is the same as the one in the database
         # check merchant allowed token to be sure they are not owing the protocol - if ALLOWToken is < than LICENCE_TOKEN they cant offboard, MA is holding fiat in their accty
@@ -408,12 +412,13 @@ class OFF_BOARDING_MA(APIView):
                                         "outstanding_fiat": token_balance.licenseTokenAmount - token_balance.allowedTokenAmount}
                             return Response(response, status=status.HTTP_400_BAD_REQUEST)
                         else:
+                            print("Need to handle removing merchant before submission of transaction")
                             remove_merchant = delete_merchant(merchant_object.UID)
                             if remove_merchant == True:
                                 try:
                                     raw_xdr = OffBoard_Merchant_with_Burn(
                                                                 recipient_pub_key=merchant_PubKey, amount=round(float(token_balance.licenseTokenAmount), 7),
-                                                                memo=merchant_Id, exchange_rate=round(float(token_balance.stakedTokenExchangeRate),7))
+                                        memo=merchant_Id, exchange_rate=round(float(token_balance.stakedTokenExchangeRate), 7), total_staked_amt=round(float(token_balance.stakedTokenAmount), 7))
                                 except Exception as e:
                                     print(e)
                                     return Response({"error": "something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
@@ -421,8 +426,8 @@ class OFF_BOARDING_MA(APIView):
                                     logging.info("We need to handle situations were merchant failed to submit the transaction, maybe by moving the merchant to a state that is  not accessible by the api")
                                     MerchantsTable.objects.filter(UID=merchant_Id).delete()
                                     _message ={}
+                                    _message["message"] = "Please sign and submit the XDR below within 30min to complete the transaction"
                                     _message["raw_xdr"] = raw_xdr
-                                    _message["message"] = "Please sign and submit the XDR below to complete the transaction"
                                     logging.info(f"Offboarding merchant {merchant_Id}, need to add interest calculation to the amount the merchant get")
                                 return Response(data=_message, status=status.HTTP_200_OK)
                             else:

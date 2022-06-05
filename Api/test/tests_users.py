@@ -3,20 +3,24 @@
 # Test withdrawal from the protocol
 # 
 import json
-from .test_setup import TestSetUpClass
+from .test_setup import TestSetUpClass, stablecoin, stablecoin_issuer, stablecoin_signer, staking_asset_issuer, staking_asset_code
 from django.urls import reverse
 from stellar_sdk.keypair import Keypair
+from modelApp.models import MerchantsTable
 
 
 
 
 class User_Testing(TestSetUpClass):
+
+
     # need to add merchant 
     def test_user_deposit(self):
     
         self.url = reverse('deposit')
         # use self.client.generic when you need to pass data into your get request
         req_data = self.client.post(self.url, data=self.request_data, format="json")
+
         # test needs to check for merchant details that is been return
         self.assertEqual(req_data.status_code, 200)
         self.assertTrue(req_data.data["amount"] == self.request_data["amount"])
@@ -134,11 +138,33 @@ class User_Testing(TestSetUpClass):
             self.user_withdrawal), content_type='application/json')
         self.assertEqual(req_data.status_code, 400)
 
-    def test_user_withdrawal_with_correct_details(self):
-        self.url = reverse('withdrawal')
-        req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(
-            self.user_withdrawal), content_type='application/json')
-        self.assertEqual(req_data.status_code, 200)
+    # def test_user_withdrawal_with_correct_details(self):
+
+        
+
+    #     self.url = reverse('deposit')
+    #     merc_url = reverse('merchant')
+    #     # use self.client.generic when you need to pass data into your get request
+
+    #     req_data = self.client.post(
+    #         self.url, data=self.request_data, format="json")
+
+    #     adc = MerchantsTable.objects.get(UID=self.req_data.data["memo"])
+
+    #     merchant_data = {
+    #         "merchant_id": req_data.data["memo"],
+    #         "transaction_Id": ,
+    #         "merchant_pubKey": adc.blockchainAddress
+    #     }
+
+    #     merchant_approval = self.client.post(merc_url, data=merchant_data, format="json")
+
+
+    #     self.url = reverse('withdrawal')
+    #     req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(
+    #         self.user_withdrawal), content_type='application/json')
+    #     print("test_user_withdrawal_with_correct_details", req_data.data)
+    #     self.assertEqual(req_data.status_code, 200)
 
 
 
