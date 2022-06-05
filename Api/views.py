@@ -591,13 +591,11 @@ class AllTokenTotalSupply(APIView):
                 }
         # allowed_issuer = ALLOWED_AND_LICENSE_P_ADDRESS
         # accts[allowed_issuer] = ALLOWED_TOKEN_CODE
-        print(accts)
-        print(len(accts))
+       
         _asset_supply = {}
         for i in range(len(accts)):
             _keys = list(accts.keys())[i]
             _values = list(accts.values())[i]
-            print(_keys, _values)
             try:
                 bala = server.assets().for_code(_values).for_issuer(_keys).call()
                 for i in bala['_embedded']['records']:
