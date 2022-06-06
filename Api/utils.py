@@ -1,3 +1,4 @@
+import logging
 import random
 import secrets, time
 
@@ -56,7 +57,7 @@ def amount_to_naira(amount):
 
 
 # to be used inside model before saving
-# @shared_task
+@shared_task
 def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRESS, _asset_code=STAKING_TOKEN_CODE, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking") -> bool:
     # check transaction status and return needed data using 
     # Check transaction hash has not been processed before
@@ -127,7 +128,8 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
 
 
                 else:
-                    pass
+                    logging.info(
+                        f"Transaction type of {event_transaction_type} not supported")
             except Exception as e:
                 print(e)
                 pass
