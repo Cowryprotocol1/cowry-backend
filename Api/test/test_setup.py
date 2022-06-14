@@ -192,6 +192,21 @@ class TestSetUpClass(APITestCase):
             "transaction_narration": "withdraw 7747"
         }
 
+        self.onboarding_details = {
+            "bankName": "Wema",
+            "bankAccount": "0000000000",
+            "phoneNumber": "0000000000",
+            "email": "000000000000@test.com",
+            "blockchainAddress": "GCO7CVQOZ73FJS2EWG5G7INJJM2X2CZMRM572WL22AX2VUCFKTYJXK3V"
+
+        }
+
+        # self.event_details = {
+        #     "hash": "202ff08e0dca56509f5fb3c77a11b92bac11efffe91063329a1ef77cd36eed22",
+        #     "memo": self.onboarding_details["user_details"]["UID"],
+        #     "event_type": "merchant_staking"
+        # }
+
 
     def tearDown(self):
         pass
