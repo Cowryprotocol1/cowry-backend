@@ -57,7 +57,7 @@ def amount_to_naira(amount):
 
 
 # to be used inside model before saving
-# @shared_task
+@shared_task
 def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRESS, _asset_code=STAKING_TOKEN_CODE, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking") -> bool:
     # check transaction status and return needed data using 
     # Check transaction hash has not been processed before
@@ -75,11 +75,12 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
         sender = tx["_embedded"]["records"][0]["from"]
         asset_code = tx["_embedded"]["records"][0]["asset_code"]
         asset_issuer = tx["_embedded"]["records"][0]["asset_issuer"]
-    
+
 
         if recipient_add == _address and asset_code == _asset_code and asset_issuer == _asset_issuer:
             try:
                 if event_transaction_type == "merchant_staking":
+                    print("got inside   ")
                     hash_check = check_transaction_hash_if_processed(transaction_hash)
                     # If above conditions are met, then the transaction is valid and we have not processed it before
 
@@ -136,8 +137,9 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
                     
 
         else:
+            print("this is the pass")
             pass
-   
+
 
 
 # def is_user_withdrawal_memo_valid(hash:str, tx_memo):
@@ -188,6 +190,6 @@ def Notifications(recipient_email, subject, message):
 # print(mail.content.decode("utf-8"))
 
 # # print(get_all_merchant_object())
-# acc = isTransaction_Valid("4f46f3321ffc0522b7a6fee76282e89bdae9b84cecd441b2111084f750542429", "f9b31c75ea3b8c1f83a9")
+# acc = isTransaction_Valid("202ff08e0dca56509f5fb3c77a11b92bac11efffe91063329a1ef77cd36eed22", "3506927921b2d889e956", _asset_code="NGN", _asset_issuer="GCYROSEOTQR6J5ROTCCLZ36X5ZSUEMNMB2BOZEYXUWQH3IW32E3VDORJ", event_transaction_type="merchant_staking")
 
 # print(acc)

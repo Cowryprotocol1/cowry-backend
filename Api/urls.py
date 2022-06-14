@@ -14,4 +14,5 @@ urlpatterns = [
     path("offboarding", OFF_BOARDING_MA.as_view(), name="offboard"),
     path("withdrawal", OFF_RAMP_FIAT.as_view(), name="withdrawal"),
     path("totalSupply", AllTokenTotalSupply.as_view(), name="totalSupply"),
+    path("accounts", AccountDetails.as_view(), name="Accounts")
 ]

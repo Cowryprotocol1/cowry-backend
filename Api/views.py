@@ -9,7 +9,7 @@ from Blockchains.Stellar.operations import (
     STABLECOIN_ISSUER, STAKING_ADDRESS, OffBoard_Merchant_with_Burn,
     User_withdrawal_from_protocol, get_network_passPhrase, is_Asset_trusted, get_horizon_server,
     merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor)
-from Blockchains.Stellar.utils import check_address_balance
+from Blockchains.Stellar.utils import check_address_balance, check_stellar_address
 from decouple import config
 from django.db import IntegrityError
 from django.http import JsonResponse
@@ -376,6 +376,7 @@ class OFF_RAMP_FIAT(APIView):
 
 class OFF_BOARDING_MA(APIView):
     def get(self, request):
+        print("Need to handle api verifying users with both UID and pubkey")
 
         # ma thats want to offboard will call this endpoint with their UID and pub key
         # we need to check if the pub key is the same as the one in the database
@@ -589,9 +590,7 @@ class AllTokenTotalSupply(APIView):
                 STABLECOIN_ISSUER: STABLECOIN_CODE,
 
                 }
-        # allowed_issuer = ALLOWED_AND_LICENSE_P_ADDRESS
-        # accts[allowed_issuer] = ALLOWED_TOKEN_CODE
-       
+
         _asset_supply = {}
         for i in range(len(accts)):
             _keys = list(accts.keys())[i]
@@ -614,10 +613,47 @@ class AllTokenTotalSupply(APIView):
         # supply of stablecoin
         # total amount in staking vault
 
-
         # token_supply = TokenSupply.objects.all()
         # serializer = TokenSupplySerializer(token_supply, many=True)
-        return Response("ok", status=status.HTTP_200_OK)
+        # return Response("ok", status=status.HTTP_200_OK)
+
+class AccountDetails(APIView):
+    def get(self, request):
+        """
+        Endpoint returns details of a given address, initial it would support only merchant and then all protocol users
+        """
+        try:
+            pub_key = check_stellar_address(request.data.get("account_id"))
+        except Exception as _a:
+            print(_a)
+            return Response({"msg": "Not a valid Stellar address"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            try:
+                merchant = get_merchant_by_pubKey(pub_key)
+                print(merchant)
+                print(merchant.UID)
+
+                print(".............")
+                
+            except MerchantsTable.DoesNotExist:
+                return Response({"msg":f"merchant with account id {pub_key} does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            else:
+
+                try:
+                    merchant_bal = TokenTable.objects.get(
+                        merchant=merchant)
+                except TokenTable.DoesNotExist:
+                    return Response({"msg":"Merchant not found"}, status=status.HTTP_404_NOT_FOUND)
+                else:
+                    data = {}
+                    data["Amount_staked"] = merchant_bal.stakedTokenAmount
+                    data["value_in_stablecoin"] = merchant_bal.licenseTokenAmount
+                    data["exchange_rate"] = merchant_bal.stakedTokenExchangeRate
+                    data["total_fiat_held_in_bank_acct"] = round(float(merchant_bal.licenseTokenAmount) - float(merchant_bal.allowedTokenAmount), 7)
+                    data["msg"] = "the total_fiat_held_in_bank_acct is not final, pending transaction are also added to the amount"
+
+                    return Response(data, status=status.HTTP_200_OK)
+            
 class EventListener(APIView):
     def post(self, request):
         serializeEvent = EventSerializer(data=request.data)
@@ -629,16 +665,16 @@ class EventListener(APIView):
                 check_memo = is_transaction_memo_valid(request.data.get("memo"))
                 if check_memo == True:
                     # pass transaction to isTransaction_Valid, which check the transaction hash
-                    isTransaction_Valid(transaction_hash=request.data.get(
-                        "hash"), memo=request.data.get("memo"),  _asset_code=STABLECOIN_CODE, _asset_issuer=STABLECOIN_ISSUER, event_transaction_type="merchant_staking")
+                    print("we are here..........")
+                    isTransaction_Valid.delay(transaction_hash=request.data.get(
+                        "hash"), memo=request.data.get("memo"),  _asset_code=STAKING_TOKEN, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking")
                 
                     
-                    # isTransaction_Valid()
                     return Response(serializeEvent.validated_data, status=status.HTTP_200_OK)
                 else:
                     return Response({"error": "Invalid memo"}, status=status.HTTP_400_BAD_REQUEST)
             elif event_type == "user_withdrawals":
-                isTransaction_Valid(request.data.get("hash"), request.data.get(
+                isTransaction_Valid.delay(request.data.get("hash"), request.data.get(
                     "memo"), _address=STABLECOIN_ISSUER, _asset_code=STABLECOIN_CODE, _asset_issuer=STABLECOIN_ISSUER, event_transaction_type="user_withdrawals")
             
             else:
