@@ -585,7 +585,7 @@ class AllTokenTotalSupply(APIView):
 
         accts = {
                 
-                ALLOWED_AND_LICENSE_P_ADDRESS: LICENSE_TOKEN_CODE, 
+                ALLOWED_AND_LICENSE_P_ADDRESS: ALLOWED_TOKEN_CODE, 
                 STABLECOIN_ISSUER: STABLECOIN_CODE,
 
                 }
