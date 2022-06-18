@@ -15,22 +15,38 @@ def is_transaction_memo_valid(memo):
 
 # check if transaction hash has been processed before
 def check_transaction_hash_if_processed(transaction_hash: str) -> bool:
-    hash_check = TxHashTable.objects.filter(txHash=transaction_hash)
-    # check if the hash has been processed before
     """
     true - transaction has been processed and store on the db
     false - transaction is not found on the db
     """
+    # try:
+    hash_check = TxHashTable.objects.filter(txHash=transaction_hash)
     if hash_check:
         return True
     else:
         return False
 # This add a transaction hash to db and also update the hash_processed field to True
 def add_and_update_transaction_hash(_hash:str, merchant_id:str) -> bool:
+    # try:
     merchant = TxHashTable.objects.get(merchant_id=merchant_id)
-    merchant.txHash = _hash
-    merchant.is_processed = True
-    merchant.save()
+  
+    if merchant:
+        if merchant.is_processed == False:
+            merchant.txHash = _hash
+            merchant.is_processed = True
+            merchant.save()
+            return True
+        else:
+            # print(merchan)
+            # merchant found but hash already processed
+            return False
+        
+    else:
+        # not found in the db
+        return False
+    
+
+    
 
 def get_merchant_by_pubKey(merchant_pubKey:str) -> MerchantsTable:
     merchant = MerchantsTable.objects.get(blockchainAddress=merchant_pubKey)
@@ -194,8 +210,14 @@ def delete_merchant(merchant: str) -> bool:
 # hash_ = check_transaction_hash_if_processed(
 #     "1bb201a3cf0e43ace1676d807aab8d01f4918399d9286f5be18c4823f83de4cc")
 # print(hash_)
-# print(hash_.is_processed)
+# print(hash_)
 # adc = remove_transaction_from_merchants_model("2377ae6f13a983b27047", 2)
 # print(adc)
+
+
+
+# add_hash = add_and_update_transaction_hash(
+#     "1bb201a3cf0e43ace1676d807aab8d01f4918399d9286f5be18c4823f83de4cc", "99e28b45764cbf5d0f5a")
+# print(add_hash)
 
 

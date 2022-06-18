@@ -91,21 +91,25 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
                         # This means transaction has been process before and should be ignore
                         pass
                     elif hash_check == False:
-                        add_and_update_transaction_hash(transaction_hash, memo) #add transaction hash to db and update the merchant txhash table
+                        update_hash = add_and_update_transaction_hash(transaction_hash, memo) #add transaction hash to db and update the merchant txhash table
                     #    Determin how much to mint using the value Naira to USD
-                        try:
-                            # determine the amount of allowed and license token to mint to the merchant
-                            [mint_amt, price] = amount_to_naira(amt)
-                            update_balance_details = update_merchant_by_allowedLicenseAmount(memo, mint_amt, amt, price)
-                            if update_balance_details == True:
-                                Mint_Token(sender, round(float(mint_amt),7), str(memo))
-                            else:
-                                print("Transaction failed")
-                                # Transaction failed, send notification to admin group
-                        except Exception as e:
-                            # Critical error, need to send to admin
-                            print(e)
-                            print("this is a critical error")
+                        if update_hash == True:
+                            try:
+                                # determine the amount of allowed and license token to mint to the merchant
+                                [mint_amt, price] = amount_to_naira(amt)
+                                update_balance_details = update_merchant_by_allowedLicenseAmount(memo, mint_amt, amt, price)
+                                if update_balance_details == True:
+                                    Mint_Token(sender, round(float(mint_amt),7), str(memo))
+                                else:
+                                    print("Transaction failed")
+                                    # Transaction failed, send notification to admin group
+                            except Exception as e:
+                                # Critical error, need to send to admin
+                                print(e)
+                                print("this is a critical error")
+                                pass
+                        elif update_hash == False:
+                            print("Transaction hash already processed or merchant with the memo not found")
                             pass
                     else:
                         pass
@@ -135,6 +139,7 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
                     logging.info(
                         f"Transaction type of {event_transaction_type} not supported")
             except Exception as e:
+                # notify_admin(e)
                 print(e)
                 pass
                     
