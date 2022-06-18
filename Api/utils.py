@@ -86,13 +86,15 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
                     print("got inside")
                     hash_check = check_transaction_hash_if_processed(transaction_hash)
                     # If above conditions are met, then the transaction is valid and we have not processed it before
-
+                    print(hash_check)
                     if hash_check == True:
                         # This means transaction has been process before and should be ignore
                         pass
                     elif hash_check == False:
                         update_hash = add_and_update_transaction_hash(transaction_hash, memo) #add transaction hash to db and update the merchant txhash table
                     #    Determin how much to mint using the value Naira to USD
+                        print("update_hash")
+                        print(update_hash)
                         if update_hash == True:
                             try:
                                 # determine the amount of allowed and license token to mint to the merchant
