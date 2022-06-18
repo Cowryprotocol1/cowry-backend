@@ -140,6 +140,9 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
                     
 
         else:
+            print("addresses", recipient_add, _address)
+            print("codes", asset_code, _asset_code)
+            print("issuers", asset_issuer, _asset_issuer)
             print("this is the pass")
             pass
 
