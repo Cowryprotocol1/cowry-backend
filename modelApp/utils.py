@@ -31,18 +31,30 @@ def add_and_update_transaction_hash(_hash:str, merchant_id:str) -> bool:
     try:
         merchant = TxHashTable.objects.get(merchant_id=merchant_id)
     except TxHashTable.DoesNotExist:
+
         return False
     else:
         if merchant:
+            print(merchant.is_processed)
+
+            print(type(merchant.is_processed))
             if merchant.is_processed == False:
                 merchant.txHash = _hash
                 merchant.is_processed = True
                 merchant.save()
                 return True
-            else:
+            elif merchant.is_processed == True:
+                print("merchant Tx already processed")
                 # print(merchan)
                 # merchant found but hash already processed
                 return False
+            else:
+                print("merchant Tx already processed")
+                print("This is the value of merchant.is_processed", merchant.is_processed)
+                # print(merchan)
+                # merchant found but hash already processed
+                return False
+
         
     # else:
     #     # not found in the db
@@ -219,9 +231,9 @@ def delete_merchant(merchant: str) -> bool:
 
 
 
-
 add_hash = add_and_update_transaction_hash(
     "1bb201a3cf0e43ace1676d807aab8d01f4918399d9286f5be18c4823f83de4cc", "99e28b45764cbf5d0f5a")
 print(add_hash)
+print(type(add_hash))
 
 
