@@ -80,7 +80,7 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
         if recipient_add == _address and asset_code == _asset_code and asset_issuer == _asset_issuer:
             try:
                 if event_transaction_type == "merchant_staking":
-                    print("got inside   ")
+                    print("got inside")
                     hash_check = check_transaction_hash_if_processed(transaction_hash)
                     # If above conditions are met, then the transaction is valid and we have not processed it before
 

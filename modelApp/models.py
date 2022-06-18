@@ -38,6 +38,7 @@ class MerchantsTable(models.Model):
 
 
 class TokenTable(models.Model):
+    print("Handle negative balance")
     merchant = models.OneToOneField(
         MerchantsTable, on_delete=models.CASCADE, primary_key=True)
     stakedTokenAmount = models.FloatField(default=0, blank=True)
