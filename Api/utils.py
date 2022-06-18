@@ -75,6 +75,9 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
         sender = tx["_embedded"]["records"][0]["from"]
         asset_code = tx["_embedded"]["records"][0]["asset_code"]
         asset_issuer = tx["_embedded"]["records"][0]["asset_issuer"]
+        print("addresses", recipient_add, _address)
+        print("codes", asset_code, _asset_code)
+        print("issuers", asset_issuer, _asset_issuer)
 
 
         if recipient_add == _address and asset_code == _asset_code and asset_issuer == _asset_issuer:
