@@ -667,7 +667,7 @@ class EventListener(APIView):
                     # pass transaction to isTransaction_Valid, which check the transaction hash
                     print("we are here..........")
                     isTransaction_Valid.delay(transaction_hash=request.data.get(
-                        "hash"), memo=request.data.get("memo"),  _asset_code=STAKING_TOKEN, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking")
+                        "hash"), memo=request.data.get("memo"), _address=config("STAKING_ADDRESS"),  _asset_code=STAKING_TOKEN, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking")
                 
                     
                     return Response(serializeEvent.validated_data, status=status.HTTP_200_OK)
