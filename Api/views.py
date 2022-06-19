@@ -272,7 +272,10 @@ class OFF_RAMP_FIAT(APIView):
             _data["expected_amount_with_fee"] = float(request.data.get(
                 "amount")) + float(GENERAL_TRANSACTION_FEE)
             balance_check = check_address_balance(_data["blockchain_address"], STABLECOIN_ISSUER, STABLECOIN_CODE, _data["amount"])
-            if balance_check:           
+            if balance_check:     
+                # if any users has a balance, then their is a merchant with debt to the protocol
+                # we can easily process payment just by checking a users balance
+                # we should probably check with server to make sure there is a merchant with debt      
                     try:
 
                         transaction_p = update_PendingTransaction_Model(

@@ -30,8 +30,8 @@ def add_and_update_transaction_hash(_hash:str, merchant_id:str) -> bool:
     # try:
     try:
         merchant = TxHashTable.objects.get(merchant_id=merchant_id)
-    except TxHashTable.DoesNotExist:
 
+    except TxHashTable.DoesNotExist:
         return False
     else:
         if merchant:
@@ -231,9 +231,10 @@ def delete_merchant(merchant: str) -> bool:
 
 
 
-add_hash = add_and_update_transaction_hash(
-    "1bb201a3cf0e43ace1676d807aab8d01f4918399d9286f5be18c4823f83de4cc", "99e28b45764cbf5d0f5a")
-print(add_hash)
-print(type(add_hash))
-
-
+# add_hash = add_and_update_transaction_hash(
+#     "1bb201a3cf0e43ace1676d807aab8d01f4918399d9286f5be18c4823f83de4cc", "99e28b45764cbf5d0f5a")
+# print(add_hash)
+# print(type(add_hash))
+# adc = get_merchant_by_pubKey(
+#     "GCO7CVQOZ73FJS2EWG5G7INJJM2X2CZMRM572WL22AX2VUCFKTYJXK3V")
+# print(adc)
