@@ -29,7 +29,6 @@ class EventTest(TestSetUpClass):
     def test_events_1(self):
         # Testnet can be reset and hash will no longer be valid
         # this endpoint will always return 200, based the celery task we are using
-       
 
         self.url = reverse('onboard')
         response = self.client.post(self.url, self.onboarding_details)
@@ -80,7 +79,7 @@ class EventTest(TestSetUpClass):
         print(req_data.data)
         print(req_data.data.stakedTokenAmount)
 
-        working on the event listener testing, how do we enable merching hash and memo
+        # working on the event listener testing, how do we enable merching hash and memo
 
         # self.assertEqual(req_data.status_code, 200)
         # self.assertTrue(req_data.data["hash"] == data["hash"])

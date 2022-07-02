@@ -57,6 +57,7 @@ class TxHashTable(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 class TransactionsTable(models.Model):
+    print("clear processed transaction narration")
     # This would hold details about a merchant and the amount of transaction to merchant has in pending
     # details should include the recipient address, the merchants object, amount pending
     merchant = models.ManyToManyField(MerchantsTable)
