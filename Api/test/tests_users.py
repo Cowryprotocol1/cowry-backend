@@ -7,6 +7,7 @@ from .test_setup import TestSetUpClass, stablecoin, stablecoin_issuer, stablecoi
 from django.urls import reverse
 from stellar_sdk.keypair import Keypair
 from modelApp.models import MerchantsTable
+from unittest.mock import patch
 
 
 
@@ -15,8 +16,9 @@ class User_Testing(TestSetUpClass):
 
 
     # need to add merchant 
-    def test_user_deposit(self):
-    
+    @patch("Api.views.is_Asset_trusted")
+    def test_user_deposit(self, mock_requests):
+        mock_requests.return_value = [True, 10000]
         self.url = reverse('deposit')
         # use self.client.generic when you need to pass data into your get request
         req_data = self.client.post(self.url, data=self.request_data, format="json")
@@ -25,12 +27,17 @@ class User_Testing(TestSetUpClass):
         self.assertEqual(req_data.status_code, 200)
         self.assertTrue(req_data.data["amount"] == self.request_data["amount"])
         self.assertTrue(req_data.data["amount_to_pay"] == 1200)
+        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
 
-    def test_user_deposit_with_invalid_amount(self):
+    @patch("Api.views.is_Asset_trusted")
+    def test_user_deposit_with_invalid_amount(self, mock_trust):
+        mock_trust.return_value = [True, 10000]
         self.url = reverse('deposit')
         self.request_data["amount"] = 999.99
         req_data = self.client.post(self.url, data=self.request_data, format="json")
         self.assertEqual(req_data.status_code, 400)
+        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
+
 
 
     def test_user_deposit_with_invalid_blockchain_address(self):
@@ -38,12 +45,16 @@ class User_Testing(TestSetUpClass):
         self.request_data["blockchainAddress"] = "GBXR3CBYCDW63FCPH3TCDTLS54S73JU6SDDTZAMCXPCXCNRIP"
         req_data = self.client.post(self.url, data=self.request_data, format="json")
         self.assertEqual(req_data.status_code, 400)
+        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
+
 
     def test_user_address_has_no_trustline_or_not_created(self):
         self.url = reverse('deposit')
         self.request_data["blockchainAddress"] = Keypair.random().public_key
         req_data = self.client.post(self.url, data=self.request_data, format="json")
         self.assertEqual(req_data.status_code, 400)
+        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
+
 
     def test_deposit_with_existing_narration(self):
         self.url = reverse('deposit')
@@ -61,13 +72,17 @@ class User_Testing(TestSetUpClass):
 
         self.assertEqual(main_req.status_code, 400)
         self.assertTrue("error" in main_req.data)
+        self.assertTrue(main_req.headers["Content-Type"] == 'application/json')
+
 
 
         
 # ============================================================================
             # test user send payment to merchant
 # ============================================================================
-    def test_user_made_deposit_to_MA_account_with_correct_details(self):
+    @patch("Api.views.is_Asset_trusted")
+    def test_user_made_deposit_to_MA_account_with_correct_details(self, mock_requests):
+        mock_requests.return_value =[True, 10000]
         self.url = reverse('deposit')
         post_data = self.client.post(
             self.url, data=self.request_data, format="json")
@@ -89,11 +104,12 @@ class User_Testing(TestSetUpClass):
         self.assertTrue(req_data.status_code == 200)
         self.assertTrue(
             req_data.data["message"] == 'Your Blockchain address will credited soon. Thank You')
+        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
 
-    
 
-    def test_user_made_deposit_to_MA_account_with_invalid_narration(self):
-    
+    @patch("Api.views.is_Asset_trusted")
+    def test_user_made_deposit_to_MA_account_with_invalid_narration(self, mock_requests):
+        mock_requests.return_value = [True, 10000]
         self.url = reverse('deposit')
 
         post_data = self.client.post(
@@ -110,61 +126,61 @@ class User_Testing(TestSetUpClass):
         req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(
             deposit_made_to_ma), content_type='application/json')
         self.assertEqual(req_data.status_code, 400)
+        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
         
 
 # ============================================================================
         # test user withdrawal flow from the protocol
 # ============================================================================
 
-    def test_user_withdrawal_with_asset_not_trusted(self):
+    @patch("Api.views.check_address_balance")
+    def test_user_withdrawal_with_asset_not_trusted(self, mock_arg):
+        # user withdrawal with no trustline
+        mock_arg.return_value =False
         self.url = reverse('withdrawal')
-        self.user_withdrawal["blockchain_address"] = self.create_a_valid_blockchain_account()
         req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(
             self.user_withdrawal), content_type='application/json')
+
         self.assertEqual(req_data.status_code, 400)
-        
-        pass
+        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
+    
     def test_user_withdrawal_with_invalid_blockchain_address(self):
+        #withdrawals with invalid Blockchain address
         self.url = reverse('withdrawal')
         self.user_withdrawal["blockchain_address"] = "GBXR3CBYCDW63FCPH3TCDTLS54S73JU6SDDTZAMCXPCXCNRIP"
         req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(
             self.user_withdrawal), content_type='application/json')
         self.assertEqual(req_data.status_code, 400)
+        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
+
 
     def test_user_withdrawal_with_invalid_narration(self):
+        #withdrawals with invalid narrations
         self.url = reverse('withdrawal')
         self.user_withdrawal["transaction_narration"] = " "
         req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(
             self.user_withdrawal), content_type='application/json')
         self.assertEqual(req_data.status_code, 400)
+        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
 
-    # def test_user_withdrawal_with_correct_details(self):
+    @patch("Api.views.check_address_balance")
+    def test_user_withdrawal_with_correct_details(self, mock_balance):
+        mock_balance.return_value=True
+        #users withdrawals from protocol with correct details
 
-        
+        self.url = reverse('withdrawal')
+        req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(
+            self.user_withdrawal), content_type='application/json')
+        self.assertEqual(req_data.status_code, 200)
+        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
+        self.assertTrue("blockchain_address" in req_data.data)
+        self.assertTrue("deposit_asset_code" in req_data.data)
+        self.assertTrue("deposit_asset_issuer" in req_data.data)
+        self.assertTrue("user_details" in req_data.data)
+        self.assertEqual(self.user_withdrawal["account_number"], req_data.data["user_details"]["account_number"])
+        self.assertEqual(self.user_withdrawal["phone_number"], req_data.data["user_details"]["phone_number"])
+        self.assertEqual(self.user_withdrawal["blockchain_address"], req_data.data["user_details"]["blockchain_address"])
 
-    #     self.url = reverse('deposit')
-    #     merc_url = reverse('merchant')
-    #     # use self.client.generic when you need to pass data into your get request
-
-    #     req_data = self.client.post(
-    #         self.url, data=self.request_data, format="json")
-
-    #     adc = MerchantsTable.objects.get(UID=self.req_data.data["memo"])
-
-    #     merchant_data = {
-    #         "merchant_id": req_data.data["memo"],
-    #         "transaction_Id": ,
-    #         "merchant_pubKey": adc.blockchainAddress
-    #     }
-
-    #     merchant_approval = self.client.post(merc_url, data=merchant_data, format="json")
-
-
-    #     self.url = reverse('withdrawal')
-    #     req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(
-    #         self.user_withdrawal), content_type='application/json')
-    #     print("test_user_withdrawal_with_correct_details", req_data.data)
-    #     self.assertEqual(req_data.status_code, 200)
 
 
 

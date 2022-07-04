@@ -37,7 +37,7 @@ def Mint_Token(recipient: str, amount: int, memo: str) -> bool:
     logging.critical(
         "need to handle if user address already maintain liability")
     check_trustline = is_Asset_trusted(address=recipient)
-    if check_trustline == True:
+    if check_trustline[0] == True:
         # this is an existing address that already has a trustline to the issuer
         logging.info(
             "Minting to an existing address that already has a trustline to the issuer")
@@ -85,19 +85,24 @@ def is_Asset_trusted(address: str, asset_number=2, issuerAddress=ALLOWED_AND_LIC
         _balances = get_horizon_server().accounts().account_id(address).call()
         balances = _balances["balances"]
         trustAssetList = []
+        xlm_balance = []
         for i in balances:
+            if i["asset_type"] == "native":
+                print(i["balance"])
+                xlm_balance.append(i["balance"])
+
             if i["asset_type"] != "native" and i["asset_issuer"] == issuerAddress:
                 trustAssetList.append(i["asset_code"])
             elif i["asset_type"] != 'native' and i["asset_issuer"] == stableCoin:
                 trustAssetList.append(i)
 
         if len(trustAssetList) >= int(asset_number):
-            return True
+            return [True, xlm_balance]
         else:
-            return False
+            return [False, 0.0]
     except Exception as e:
         print(e)
-        return False
+        return [False, 0.0]
 
 
 def send_and_authorize_allowed_and_license_token_new_address(recipient: str, memo: str, amount: str, asset_signer: str):
@@ -240,8 +245,8 @@ set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG,
 trustor=trustorPub, asset=authorized_asset,
 source=keypair_sender.public_key
 ).append_payment_op(destination=depositor_pubKey, asset=buying_asset, amount=amount_minus_fee, source=trustorPub
-            ).append_payment_op(destination=PROTOCOL_FEE_ACCOUNT, asset=buying_asset, amount=str(round(protocol_fee, 7)), source=trustorPub
-                                ).build()
+).append_payment_op(destination=PROTOCOL_FEE_ACCOUNT, asset=buying_asset, amount=str(round(protocol_fee, 7)), source=trustorPub
+).build()
 
     # sign transaction
     authorized_asset_tx.sign(authorizer_of_tx)

@@ -22,7 +22,7 @@ def Id_generator():
     return "200"+str(numbers)
    
 
-
+# print(Id_generator())
 # def createOnchainAsset(asset_code, asset_issuer) -> Asset:
 #     asset_obj = Asset(code=asset_code, issuer=asset_issuer)
 

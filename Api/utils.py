@@ -75,22 +75,21 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
         sender = tx["_embedded"]["records"][0]["from"]
         asset_code = tx["_embedded"]["records"][0]["asset_code"]
         asset_issuer = tx["_embedded"]["records"][0]["asset_issuer"]
-        print("addresses", recipient_add, _address)
-        print("codes", asset_code, _asset_code)
-        print("issuers", asset_issuer, _asset_issuer)
+        # print("addresses", recipient_add, _address)
+        # print("codes", asset_code, _asset_code)
+        # print("issuers", asset_issuer, _asset_issuer)
 
 
         if recipient_add == _address and asset_code == _asset_code and asset_issuer == _asset_issuer:
-            try:
-                if event_transaction_type == "merchant_staking":
-                    print("got inside")
-                    hash_check = check_transaction_hash_if_processed(transaction_hash)
-                    # If above conditions are met, then the transaction is valid and we have not processed it before
-                    print(hash_check)
-                    if hash_check == True:
-                        # This means transaction has been process before and should be ignore
-                        pass
-                    elif hash_check == False:
+            hash_check = check_transaction_hash_if_processed(transaction_hash)
+            # If above conditions are met, then the transaction is valid and we have not processed it before
+            if hash_check == True:
+                print("Hash already processed")
+                pass
+            elif hash_check == False:
+                try:
+                    if event_transaction_type == "merchant_staking":
+                        print("got inside")
                         update_hash = add_and_update_transaction_hash(transaction_hash, memo) #add transaction hash to db and update the merchant txhash table
                     #    Determin how much to mint using the value Naira to USD
                         print("update_hash")
@@ -113,39 +112,45 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
                         elif update_hash == False:
                             print("Transaction hash already processed or merchant with the memo not found")
                             pass
-                    else:
-                        pass
-                elif event_transaction_type == "user_withdrawals":
-                    merchants_list = TokenTableSerializer(
-                        all_merchant_token_bal(), many=True)
-
-                    selected_ma = merchants_to_process_transaction(
-                        merchants_list.data, tx_amount=amt, bank=None, transaction_type="user_withdrawals")
-
-                    # print(selected_ma)
-                    if selected_ma != False:
-
-                        update_cleared_uncleared_bal(
-                            merchant=selected_ma["merchant"]["UID"], status="uncleared", amount=amt)
-                        tx_obj = TransactionsTable.objects.get(
-                            id=memo)
-                        assign_transaction_to_merchant(
-                            transaction=tx_obj, merchant=selected_ma["merchant"]["UID"])
-                        Notifications(
-                            selected_ma["merchant"]["email"], "Pending Transaction", "You have a pending transaction")
-                    else:
-                        pass
-
-
-                else:
-                    logging.info(
-                        f"Transaction type of {event_transaction_type} not supported")
-            except Exception as e:
-                # notify_admin(e)
-                print(e)
-                pass
                     
+                    elif event_transaction_type == "user_withdrawals":
+                        
+                        merchants_list = TokenTableSerializer(
+                            all_merchant_token_bal(), many=True)
 
+                        selected_ma = merchants_to_process_transaction(
+                            merchants_list.data, tx_amount=amt, bank=None, transaction_type="user_withdrawals")
+                        if selected_ma:
+                        # add transaction hash to db and update the merchant txhash table
+                            update_hash = add_and_update_transaction_hash(
+                                transaction_hash, selected_ma["merchant"]["UID"])
+                            print(update_hash)
+                            if update_hash == True:
+                                update_cleared_uncleared_bal(
+                                    merchant=selected_ma["merchant"]["UID"], status="uncleared", amount=amt)
+                                tx_obj = TransactionsTable.objects.get(
+                                    id=memo)
+                                assign_transaction_to_merchant(
+                                    transaction=tx_obj, merchant=selected_ma["merchant"]["UID"])
+                                Notifications(
+                                    selected_ma["merchant"]["email"], "Pending Transaction", "You have a pending transaction")
+                            else:
+                                pass
+                        
+                        elif not selected_ma:
+                            print(selected_ma)
+                            #notify admin
+                            pass
+
+
+
+                    else:
+                        logging.info(
+                            f"Transaction type of {event_transaction_type} not supported")
+                except Exception as e:
+                    # notify_admin(e)
+                    print(e)
+                    pass
         else:
             print("addresses", recipient_add, _address)
             print("codes", asset_code, _asset_code)
@@ -156,7 +161,7 @@ def isTransaction_Valid(transaction_hash: str, memo: str, _address=STAKING_ADDRE
 
 
 # def is_user_withdrawal_memo_valid(hash:str, tx_memo):
-def merchants_to_process_transaction(merchants: List, tx_amount: int, bank: str, transaction_type="deposit") -> str:
+def merchants_to_process_transaction(merchants: List, tx_amount: int, bank=None, transaction_type="deposit") -> str:
     merchant_list = []
     if transaction_type == "deposit":
         for merchant in merchants:

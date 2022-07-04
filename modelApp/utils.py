@@ -29,15 +29,12 @@ def check_transaction_hash_if_processed(transaction_hash: str) -> bool:
 def add_and_update_transaction_hash(_hash:str, merchant_id:str) -> bool:
     # try:
     try:
-        merchant = TxHashTable.objects.get(merchant_id=merchant_id)
-
+        merchant = TxHashTable.objects.get(txHash=_hash)
     except TxHashTable.DoesNotExist:
-        return False
+        TxHashTable.objects.create(merchant_id=merchant_id, txHash=_hash, is_processed=True)
+        return True
     else:
         if merchant:
-            print(merchant.is_processed)
-
-            print(type(merchant.is_processed))
             if merchant.is_processed == False:
                 merchant.txHash = _hash
                 merchant.is_processed = True
@@ -189,6 +186,7 @@ def update_xdr_transaction(merchant:object):
     merchant.TransactionTable.remove(merchant)
 
 def update_cleared_uncleared_bal(merchant: object, status: str, amount: float):
+    print("Needs to update merchant balances in cases where the user expected to send payment has not send payment after a specific time")
     merchant_obj = TokenTable.objects.get(merchant=merchant)
     if status == "cleared":
         merchant_obj.unclear_bal -= amount
