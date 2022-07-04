@@ -36,39 +36,102 @@ from .serializers import (EventSerializer, Fiat_Off_RampSerializer,
                           Fiat_On_RampSerializer, MerchantsTableSerializer,
                           OffBoard_A_MerchantSerializer, TokenTableSerializer,
                           TransactionSerializer,
-                          XdrGeneratedTransactionSerializer)
+                          XdrGeneratedTransactionSerializer, Sep6DepositSerializer, Sep6WithdrawalSerializer)
 from .utils import (PROTOCOL_COMMISSION, STAKING_TOKEN_ISSUER, Notifications,
                     isTransaction_Valid, merchants_to_process_transaction)
-
+from rest_framework.renderers import TemplateHTMLRenderer
 STAKING_TOKEN = config("STAKING_TOKEN_CODE")
 STAKING_ADDRESS = config("STAKING_ADDRESS")
 GENERAL_TRANSACTION_FEE = config("GENERAL_TRANSACTION_FEE")
 
 
+SEP_INFO = {
+    "deposit": {
+        "NGN": {
+            "enabled": True,
+            "fee_fixed": GENERAL_TRANSACTION_FEE,
+            "min_amount": 1000,
+            "fields": {
+                "asset_code": {
+                    "description": "asset code for depositing, this should be NGN"
+                },
+                "account": {
+                    "description": "stellar address to credit with the stable coin"
+                },
+                "amount": {
+                    "description": "amount in TZS that you plan to deposit"
+                }
+            }
+        },
+    },
+    "withdraw": {
+        "NGN": {
+            "enabled": True,
+            "fee_minimum": GENERAL_TRANSACTION_FEE,
+            "min_amount": 1000,
+            "max_amount": 5000000,
+            "types": {
+                "bank_account": {
+                    "fields": {
+                        "bank_name": {
+                            "description": "name of the abnk eg GTB, Firstbank, FCMB, etc"
+                        },
+                        "account_number": {
+                            "description": "your account number"
+                        },
+                        "amount":{"description":"Amount you intend to withdraw"}
+                    }
+                },
+            },
+        },
+        "fee": {
+            "enabled": True
+        },
+        "account_creation":{
+            "enable":False
+        },
+        "transactions": {
+            "enabled": True,
+            "authentication_required": False
+        },
+        "transaction": {
+            "enabled": False,
+            "authentication_required": False
+        }
+    }
+
+}
 
 
+# need to add all nigeria banks, sorting code can be any random numbers, we only use them internally, they are not send to the bank
 
-@api_view(['GET'])
-def index(requests):
-    data = {"test": "test"}
-    return Response(data)
+# print(banks["AccessBank"])
+
+# @api_view(['GET'])
+# def index(requests):
+#     data = {"test": "test"}
+#     return Response(data)
+
+
+class IndexPage(APIView):
+    renderer_classes = [TemplateHTMLRenderer]
+    template_name = 'Api/index.html'
+    def get(self, requests):
+        data = {"test": "ok"}
+        return Response(data)
 
 
 class OnBoardMA(APIView):
     """
     Endpoint to onboard a merchant
     """
-    def get(self, request):
-       
-        data = {"test": "test"}
-        return Response(data)
 
     def post(self, request):
         staking_address = config("STAKING_ADDRESS")
         is_asset_trusted = is_Asset_trusted(
             request.data.get("blockchainAddress"), asset_number=3)
 
-        if is_asset_trusted == True:
+        if is_asset_trusted[0] == True:
             _data = {}
             _data["blockchainAddress"] = request.data.get("blockchainAddress")
             _data["email"] = request.data.get("email")
@@ -84,7 +147,7 @@ class OnBoardMA(APIView):
                     merchant_saved = serializeMA.save()
 
                     TokenTable.objects.create(merchant=merchant_saved)
-                    TxHashTable.objects.create(merchant=merchant_saved)
+                    # TxHashTable.objects.create(merchant=merchant_saved)
                     # TransactionsTable.objects.create(merchant=merchant_saved)
                 
                 except Exception as e:
@@ -141,7 +204,7 @@ class ON_RAMP_FIAT_USERS(APIView):
             is_asset_trusted = is_Asset_trusted(
                 blockchainAddress, 1, STABLECOIN_ISSUER)
 
-            if is_asset_trusted == True:
+            if is_asset_trusted[0] == True:
                 merchants_list = TokenTableSerializer(
                     all_merchant_token_bal(), many=True)
 
@@ -182,7 +245,7 @@ class ON_RAMP_FIAT_USERS(APIView):
                 else:
                     return Response(data={"error": "No merchant found", "message": "There might be no merchant registered on the Protocol yet or you are entering a very high amount"}, status=status.HTTP_404_NOT_FOUND)
             else:
-                assets = [{"code": STAKING_TOKEN, "issuer": STAKING_TOKEN_ISSUER}, {"code": STABLECOIN_CODE, "issuer": STABLECOIN_ISSUER}]
+                assets = [{"code": STABLECOIN_CODE, "issuer": STABLECOIN_ISSUER}]
                 return Response({
                     "error": f"your address must add trustline to the following assets and also have enough balance for {STAKING_TOKEN}",
                     "assets": assets}, status=status.HTTP_400_BAD_REQUEST)
@@ -272,7 +335,10 @@ class OFF_RAMP_FIAT(APIView):
             _data["expected_amount_with_fee"] = float(request.data.get(
                 "amount")) + float(GENERAL_TRANSACTION_FEE)
             balance_check = check_address_balance(_data["blockchain_address"], STABLECOIN_ISSUER, STABLECOIN_CODE, _data["amount"])
-            if balance_check:           
+            if balance_check:     
+                # if any users has a balance, then their is a merchant with debt to the protocol
+                # we can easily process payment just by checking a users balance
+                # we should probably check with server to make sure there is a merchant with debt      
                     try:
 
                         transaction_p = update_PendingTransaction_Model(
@@ -312,65 +378,9 @@ class OFF_RAMP_FIAT(APIView):
                 #     return Response(data={"message": "No merchant Available for Withdrawal at the moment, please check back later"}, status=status.HTTP_404_NOT_FOUND)
         
             else:
-                return Response(data={"message": "Insufficient Balance"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(data={"message": "Insufficient Balance or error with your address"}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    # def post(self, request):
-
-    #     signed_xdr = request.data.get("xdr")
-    #     if signed_xdr:
-    #         try:
-    #             envelope = TransactionEnvelope.from_xdr(
-    #                 signed_xdr, get_network_passPhrase())
-    #         except:
-    #             return Response(data={"error": "Invalid XDR"}, status=status.HTTP_400_BAD_REQUEST)
-    #         else:
-    #             # print(bc.transaction.operations[0].trustor)
-    #             if len(envelope.signatures) != 1:
-    #                 return Response(data={"error": "Please sign the XDR"}, status=status.HTTP_400_BAD_REQUEST)
-    #             elif len(envelope.transaction.operations) != 6:
-    #                 return Response(data={"error": "Invalid Transaction"}, status=status.HTTP_400_BAD_REQUEST)
-
-    #             else:
-    #                 list_of_operations = envelope.transaction.operations
-    #                 trustor_merchant = list_of_operations[0].trustor
-    #                 expected_protocol_fee = float(GENERAL_TRANSACTION_FEE) * float(PROTOCOL_COMMISSION)
-    #                 expected_merchant_fee = float(GENERAL_TRANSACTION_FEE) - float(expected_protocol_fee)
-    #                 allowed_token_amt = list_of_operations[1].amount
-    #                 if list_of_operations[0].asset.code != ALLOWED_TOKEN_CODE or list_of_operations[0].asset.issuer != ALLOWED_AND_LICENSE_P_ADDRESS or list_of_operations[0].clear_flags != TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG or list_of_operations[0].set_flags != TrustLineFlags.AUTHORIZED_FLAG:
-    #                     return Response(data={"error": "Invalid Transaction"}, status=status.HTTP_400_BAD_REQUEST)
-    #                 elif list_of_operations[1].asset.code != ALLOWED_TOKEN_CODE or list_of_operations[1].asset.issuer != ALLOWED_AND_LICENSE_P_ADDRESS:
-    #                     return Response(data={"error": "Invalid Transaction"}, status=status.HTTP_400_BAD_REQUEST)
-    #                 elif list_of_operations[2].asset.code != ALLOWED_TOKEN_CODE or list_of_operations[2].asset.issuer != ALLOWED_AND_LICENSE_P_ADDRESS or list_of_operations[2].set_flags != TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG or list_of_operations[2].clear_flags != TrustLineFlags.AUTHORIZED_FLAG:
-    #                     return Response(data={"error": "Invalid Transaction"}, status=status.HTTP_400_BAD_REQUEST)
-    #                 elif list_of_operations[3].destination.account_id != trustor_merchant or list_of_operations[3].asset.code != STABLECOIN_CODE or list_of_operations[3].asset.issuer != STABLECOIN_ISSUER or float(list_of_operations[3].amount) != float(expected_merchant_fee):
-    #                     return Response(data={"error": "Invalid Transaction"}, status=status.HTTP_400_BAD_REQUEST)
-    #                 elif list_of_operations[4].destination.account_id != PROTOCOL_FEE_ACCOUNT or list_of_operations[4].asset.code != STABLECOIN_CODE or list_of_operations[4].asset.issuer != STABLECOIN_ISSUER or float(list_of_operations[4].amount) != float(expected_protocol_fee):
-    #                     return Response(data={"error": "Invalid Transaction"}, status=status.HTTP_400_BAD_REQUEST)
-    #                 elif list_of_operations[5].destination.account_id != STABLECOIN_ISSUER or list_of_operations[5].asset.code != STABLECOIN_CODE or list_of_operations[5].asset.issuer != STABLECOIN_ISSUER or float(list_of_operations[5].amount) != float(allowed_token_amt):
-    #                     return Response(data={"error": "Invalid Transaction"}, status=status.HTTP_400_BAD_REQUEST)
-    #                 else:
-    #                     logging.warning("This can be executed for any else statement, need to optimize check")
-    #                     _memo = envelope.transaction.memo.to_xdr_object()
-                    
-    #                     check_xdr = check_xdr_if_already_exist(signed_xdr)
-    #                     if check_xdr == True:
-    #                         return Response(data={"error": "Transaction already submitted to server"}, status=status.HTTP_400_BAD_REQUEST)
-    #                     elif check_xdr == False:
-    #                         try:
-    #                             update_xdr_table("withdraw", tx_xdr=signed_xdr, tx_status="pending withdrawal submission", merchant=_memo.text.decode("utf-8"), transaction_Id=None)
-    #                         except Exception as E:
-    #                             #notify admin
-    #                             return Response(data={"error": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
-    #                         else:
-    #                             return Response(data={"message": "Thanks, you are account will be credited soon"}, status=status.HTTP_200_OK)
-                    
-    #                     # save xdr to database, 
-    #                     # merchant can view xdr details, if ok, merchant send to server for signing and submission
-    #     return Response(data={"message": "Please provide signed xdr"}, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 
 
@@ -466,6 +476,8 @@ class MerchantDepositConfirmation(APIView):
             return Response(data={"error": "Please provide merchant public key"}, status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request):
+        #to do
+        print("Merchant should be able to specify the amount they recieved in their bank acct, rather than we processing based on the expected amount")
         """
         Merchants send transaction Id of a transaction that has been processed by the merchant
         endpoint for merchants to submit signed transaction to the blockchain
@@ -484,7 +496,6 @@ class MerchantDepositConfirmation(APIView):
                 return Response({"error": f"Merchant with id {merchants_Id} not found"}, status=status.HTTP_404_NOT_FOUND)
             else:
                 for transaction in merchants_txs:
-                    
                     if transaction.id == deposit_withdrawal_Id and transaction.transaction_type == 'deposit' and merchant_pubKey == merchant_table.blockchainAddress:
                         depositor_address = transaction.users_address
                         amount_deposit  = transaction.transaction_amount
@@ -513,7 +524,7 @@ class MerchantDepositConfirmation(APIView):
                                 return Response({"error": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
                             else:
                                 #need to update transaction table hash for future refrences
-                                return Response({"message": "ok", "xdr":xdr_obj}, status=status.HTTP_200_OK)
+                                return Response({"message": "please sign and submit the xdr below", "xdr":xdr_obj}, status=status.HTTP_200_OK)
                         else:
                             return Response({"error": xdr_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
                     elif transaction.id == deposit_withdrawal_Id and transaction.transaction_type == 'withdraw' and merchant_pubKey == merchant_table.blockchainAddress:
@@ -667,7 +678,7 @@ class EventListener(APIView):
                     # pass transaction to isTransaction_Valid, which check the transaction hash
                     print("we are here..........")
                     isTransaction_Valid.delay(transaction_hash=request.data.get(
-                        "hash"), memo=request.data.get("memo"),  _asset_code=STAKING_TOKEN, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking")
+                        "hash"), memo=request.data.get("memo"), _address=config("STAKING_ADDRESS"),  _asset_code=STAKING_TOKEN, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking")
                 
                     
                     return Response(serializeEvent.validated_data, status=status.HTTP_200_OK)
@@ -687,5 +698,115 @@ class EventListener(APIView):
 
         return Response(serializeEvent.errors, status.HTTP_400_BAD_REQUEST)
 
+#Stellar Toml
 
-# add event lister to issuers account for incoming deposit from users
+class StellarToml(APIView):
+    renderer_classes = [TemplateHTMLRenderer]
+    template_name = 'Api/stellar.toml'
+    def get(self, requests):
+        data = {"test": "ok"}
+
+        return Response(data)
+
+@api_view(["GET"])
+def Sep6Deposit(requests):
+    """
+    Endpoint for sep6 deposit
+    Payment transaction will be send with claimable balance during tranfer if the account has not 
+    """
+    sep6Data = Sep6DepositSerializer(data=requests.query_params)
+    if sep6Data.is_valid():
+        is_asset_trusted = is_Asset_trusted(
+            sep6Data.validated_data["account"], 1, STABLECOIN_ISSUER)
+        if is_asset_trusted[0] == True:
+
+            merchants_list = TokenTableSerializer(
+                all_merchant_token_bal(), many=True)
+            amount = sep6Data.validated_data["amount"]
+            account = sep6Data.validated_data["account"]
+            transaction_narration = uidGenerator(15) #This should be changed to random wordlist
+
+            MA_selected = merchants_to_process_transaction(
+                merchants_list.data, amount, bank=None)
+            if MA_selected:
+                print(MA_selected)
+                try:
+                    update_pending_transaction_model(
+                        MA_selected["merchant"]["UID"], transaction_amt=str(float(amount) + float(GENERAL_TRANSACTION_FEE)), transaction_type="deposit", narration=transaction_narration,
+                        transaction_memo=MA_selected["merchant"]["UID"], phone_num=MA_selected["merchant"]["phoneNumber"],
+                        user_bank_account=MA_selected["merchant"]["bankAccount"], bank_name=MA_selected["merchant"]["bankName"], user_block_address=account)
+                except IntegrityError as e:
+                    print(e)
+                    if 'UNIQUE constraint failed' in e.args[0]:
+                        return Response({"error": "there is a pending payment with this narration, please update transaction narration"}, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        # notify admin
+                        return Response({"error": "something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    update_cleared_uncleared_bal(
+                        MA_selected["merchant"]["UID"], "uncleared", amount)
+                    data = {
+                        "eta": '5 minutes',
+                        "min_amount": 1000,
+                        "fee": GENERAL_TRANSACTION_FEE,
+                        "how": f'Please transfer your funds to the account number specified below. Your deposit reference is {transaction_narration}, please put this as your transfers remarks/memo.',
+                        "extra_info":
+                        {
+                            "bank_name": MA_selected["merchant"]["bankName"],
+                            "account_number": MA_selected["merchant"]["bankAccount"],
+                            "transaction_ref": transaction_narration,
+                            "phoneNumber": MA_selected["merchant"]["phoneNumber"]
+                        }
+                    }
+                return Response(data=data, status=status.HTTP_200_OK)
+                
+            else:
+                return Response(data={"error": "No merchant found", "message": "There might be no merchant found at the moment or you are entering a very high amount"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            assets={"code":STABLECOIN_CODE, "issuer":STABLECOIN_ISSUER}
+            return Response({
+                "error": "your address must add trustline to the following assets",
+                "assets": assets}, status=status.HTTP_400_BAD_REQUEST)
+
+    else:
+        return Response(sep6Data.errors, status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+def sepInfo(requests):
+   return Response(SEP_INFO)
+
+@api_view(["GET"])
+def sep6Withdrawal(requests):
+    _data = requests.query_params
+    serializer_Data = Sep6WithdrawalSerializer(data=_data)
+    if serializer_Data.is_valid():
+        memo = uidGenerator(13)
+        try:
+            transaction_p = update_PendingTransaction_Model(
+                                transaction_amt=_data["amount"], 
+                                transaction_type='withdraw', 
+                                narration=memo,
+                                transaction_hash=None,
+                                user_block_address=_data["account"],
+                                phone_num=None,
+                                user_bank_account=_data["dest"],
+                                bank_name=_data["dest_extra"],
+                            ) 
+        except Exception as Error:
+            print(Error)
+            #Notify admin
+            return Response(Error.args, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            data = {
+                "account_id": STABLECOIN_ISSUER,
+                "memo_type": 'text',
+                "memo": transaction_p.id,
+                "eta": 120,
+                "min_amount": 1000,
+                "fee_fixed": GENERAL_TRANSACTION_FEE
+            }
+    
+        return Response(data, status=status.HTTP_200_OK)
+    else:
+        return Response(serializer_Data.errors, status=status.HTTP_400_BAD_REQUEST)

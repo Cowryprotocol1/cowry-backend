@@ -2,13 +2,21 @@
 from modelApp.models import MerchantsTable, TokenTable, TxHashTable, TransactionsTable, XdrGeneratedTransaction
 from modelApp.utils import all_merchant_token_bal
 from rest_framework import serializers
-from Blockchains.Stellar.utils import check_stellar_address
+from Blockchains.Stellar.utils import check_stellar_address, check__asset_code_For_stable
+from django.core.exceptions import ValidationError
 
 # print(check_stellar_address("FGHJKJHGFDDFGHJ"))
 # def validate_blockchainAddress(value):
 #         if not is_account_valid(value):
 #             raise serializers.ValidationError("Invalid Blockchain Address or Account not Created")
 #         return value
+
+
+def check_account_numberLen(value):
+    if len(value) == 10:
+        return value
+    else:
+        raise ValidationError("Invalid bank account number, len should be equal 10")
 
 class MerchantsTableSerializer(serializers.ModelSerializer):
     # blockchainAddress = serializers.CharField(
@@ -18,7 +26,7 @@ class MerchantsTableSerializer(serializers.ModelSerializer):
         model = MerchantsTable
         fields = ['email', 'bankName', 'bankAccount', 'phoneNumber',
                 'blockchainAddress', 'UID', 'transaction_processing_status']
-        # Custome validation for address field
+        # Custom validation for address field
 
 
 
@@ -62,10 +70,10 @@ class OffBoard_A_MerchantSerializer(serializers.Serializer):
 
 
 class Fiat_Off_RampSerializer(serializers.Serializer):
-    amount = serializers.FloatField()
+    amount = serializers.FloatField(min_value=1000, required=True)
     bank_name = serializers.CharField(max_length=128)
     account_number = serializers.CharField(max_length=10)
-    name_on_acct = serializers.CharField(max_length=128, allow_null=True)
+    name_on_acct = serializers.CharField(max_length=128, allow_null=True, required=False)
     phone_number = serializers.CharField(max_length=128)
     blockchain_address = serializers.CharField(validators=[check_stellar_address])
     transaction_narration = serializers.CharField(max_length=128)
@@ -78,3 +86,25 @@ class Fiat_On_RampSerializer(serializers.Serializer):
     blockchainAddress = serializers.CharField(
         validators=[check_stellar_address])
     narration = serializers.CharField(max_length=128)
+
+
+class Sep6DepositSerializer(serializers.Serializer):
+    asset_code = serializers.CharField(
+        max_length=20, min_length=3, required=True, allow_null=False, validators=[check__asset_code_For_stable])
+    account = serializers.CharField(
+        max_length=56, min_length=56, required=True, allow_null=False)
+    amount = serializers.FloatField(allow_null=True, required=True, min_value=1000.0)
+    memo_type = serializers.CharField(allow_blank=True,
+        max_length=56, min_length=2, required=False)
+    memo = serializers.CharField(allow_blank=True, required=False,
+        max_length=56, min_length=2)
+    email = serializers.EmailField(allow_blank=True, required=False)
+    
+
+class Sep6WithdrawalSerializer(serializers.Serializer):
+    asset_code = serializers.CharField(
+        max_length=20, min_length=3, required=True, validators=[check__asset_code_For_stable])
+    account=serializers.CharField(required = True, validators=[check_stellar_address])
+    amount = serializers.FloatField(allow_null=True, required=False, min_value=1000.0)
+    dest = serializers.CharField(required=True, validators=[check_account_numberLen])
+    dest_extra = serializers.CharField(min_length=2, max_length=20, required=True)

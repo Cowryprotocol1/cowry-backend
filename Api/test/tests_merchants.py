@@ -14,38 +14,53 @@ from .test_setup import (TestSetUpClass, allowed_asset, allowed_asset_issuer,
 
 from modelApp.utils import assign_transaction_to_merchant, update_PendingTransaction_Model
 from utils.utils import Id_generator
+from unittest.mock import patch
 class Merchants_Class_Test(TestSetUpClass):
 
     def test_merchant_with_no_trustline_for_all_assets(self):
         # clean the added user
-        present_user = MerchantsTable.objects.get(
-                UID=self.created_user.UID)
-        present_user.delete()
-        self._data["blockchainAddress"] = Keypair.random().public_key
+       
+        dummy_data = {}
+        dummy_data["blockchainAddress"] = Keypair.random().public_key
+        dummy_data["email"] = str(Id_generator())+"@gmail.com"
+        dummy_data["bankName"] = "TestBank"
+        dummy_data["bankAccount"] = Id_generator()
+        dummy_data["phoneNumber"] = "08011122333"
         
         self.url = reverse('onboard')
-        response = self.client.post(self.url, self._data)
+        response = self.client.post(self.url, dummy_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.headers["Content-Type"] == 'application/json')
         self.assertTrue("assets" in response.data)
         self.assertEquals(len(response.data["assets"]), 3)
         self.assertTrue(response.data["assets"][0]["code"] == allowed_asset)
         self.assertTrue(response.data["assets"][1]["code"] == license_token)
         self.assertTrue(response.data["assets"][2]["code"] == stablecoin)
-
-    def test_onBoardMerchant_all_required_trustline(self):
-        present_user = MerchantsTable.objects.get(UID=self.created_user.UID)
-        present_user.delete()
-        self._data["blockchainAddress"] = self.merchant_keypair.public_key
+        
+    @patch("modelApp.models.is_account_valid")
+    @patch("Api.views.is_Asset_trusted")
+    def test_onBoardMerchant_all_required_trustline(self, mock_trust, mock_validator):
+        #with python mock, you can mock any complex logic together, but always try to mock the simplest ones, the ones that return true or false
+        mock_trust.return_value = [True, 10000]
+        mock_validator.return_value =True
+        dummy_data = {}
+        dummy_data["blockchainAddress"] = Keypair.random().public_key
+        dummy_data["email"] = str(Id_generator())+"@gmail.com"
+        dummy_data["bankName"] = "TestBank"
+        dummy_data["bankAccount"] = Id_generator()
+        dummy_data["phoneNumber"] = "08011122333"
         self.url = reverse('onboard')
-        response = self.client.post(self.url, self._data)
+        response = self.client.post(self.url, dummy_data)
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.headers["Content-Type"] == 'application/json')
         self.assertEqual(response.data["staking_address"], staking_address)
         self.assertEqual(response.data["staking_asset_code"], staking_asset_code)
         self.assertEqual(
             response.data["staking_asset_issuer"], staking_asset_issuer)
         self.assertTrue("memo" in response.data)
         self.assertTrue("user_details" in response.data)
-        self.assertEquals(response.data["user_details"]["email"], self._data["email"])
+        self.assertEquals(response.data["user_details"]["email"], dummy_data["email"])
 
 # ==========================================================================================
             # Merchant Un-staking from the protocol

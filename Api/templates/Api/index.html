@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Decentralized Stablecoin</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <style>
+        body {
+            padding: 40px;
+        }
+
+        a>i {
+            font-size: 3rem !important;
+            margin-right: 10px !important;
+        }
+
+        .jumbotron {
+            padding-bottom: 20px !important;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container-lg">
+        <header class="jumbotron">
+            <h1 class="display-2">Cowry Protocol</h1>
+            <h2>A Decentralized Fiat Backed Stablecoin</h2>
+        </header>
+        <section class="container-fluid">
+            <!-- <section>
+                <h3>Acroynyms & Terminology:</h3>
+                <ul>
+                    <li>REST: REpresentational State Transfer - <a
+                            href="https://www.codecademy.com/articles/what-is-rest" target="_blank">Definition &amp;
+                            Discussion</a></li>
+                    <li>API: Application Programming Interface - <a
+                            href="https://www.freecodecamp.org/news/what-is-an-api-in-english-please-b880a3214a82/"
+                            target="_blank">Definition &amp; Discussion</a></li>
+                    <li>HTTP Methods / Verbs - <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods"
+                            target="_blank">Definition &amp; Discussion</a></li>
+                    <li>HTTP Response Status Codes - <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status"
+                            target="_blank">Listing of Codes</a></li>
+                    <li>CRUD: Create, Read, Update, Delete - <a href="https://www.codecademy.com/articles/what-is-crud"
+                            target="_blank">Definition &amp; Discussion</a></li>
+                    <li>CORS: Cross-Origin Resource Sharing - <a
+                            href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS" target="_blank">Definition
+                            &amp; Discussion</a></li>
+                </ul>
+            </section> -->
+            <section>
+                <h3>Introduction</h3>
+                <p>This is the initial design for a new type of stablecoin that is decentralized, Backed by Fiat and controlled by a
+                Decentralized Autonomous Organization otherwise known as a DAO, the goal is to provide a stablecoin that combines the
+                stability and trust of fiat combine with the decentralized and security of blockchain to a single stablecoin, enjoying
+                the benefit of both worlds. The goal of this design is not to be a Central Bank, the goal is to manage, the issuance of
+                a new type of stablecoin that is decentralized, backed by physical fiat held in a distributed account and managed by a
+                group of people through a DAO, in a transparent way using Blockchain technology. The goal is to create a truly
+                peer-2-peer stablecoin that is censorship resistant, backed by Fiat, available for Everyone, convenient to use, etc.
+                When properly implemented, APIs will be publicly available for anyone/businesses to integrate with and use provided they
+                comply with the rules that governed the DAO. The most effective way to grow the stablecoin and make it
+                censorship-resistant is by businesses joining the list of Independent Fiat Providers(IFP) making it more robust. This
+                design allows Independent Fiat Providers to hold Fiat in their physical bank account rather than the common way for Fiat
+                backed Stablecoin which allows a single organization to hold fiat in a single Bank Account.</p>
+                <p> This specific Protocol will only support Naira Backed stablecoin at the moment, we plan to add more once we are comfortable with the design</p>
+            </section>
+            <hr>
+            <section>
+                <h2 class="display-5">API Details:</h2>
+                <h3>Accept Parameters</h3>
+                <p>The api list below are publicly available for anyone to use, we plan to support sep6 for easy withdrawals and deposit
+                </p>
+
+                <p>The API will respond to the following 'Accept:' values with appropriate content.</p>
+                <ul>
+                    <li>text/plain - Content will be returned as a plain string.</li>
+                    <li>application/json - Content will be returned as a JSON object.</li>
+                </ul>
+                <h3>Operations</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Path</th>
+                            <th>Arguments</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>GET</td>
+                            <td>/</td>
+                            <td>Not Require</td>
+                            <td>This page. <em>HTML response.</em></td>
+                        </tr>
+                        <tr>
+                            <td>POST</td>
+                            <td>/onboard</td>
+                            <td>blockchainAddress <br>email<br>bankName<br>bankAccount<br>phoneNumber</td>
+                            <td>This is the endpoint for onboarding IFPs to the protocol, This will return details for IFP staking in a json format.
+                                <em>JSON
+                                    response.</em></td>
+                        </tr>
+
+                        <tr>
+                            <td>GET</td>
+                            <td>/offboarding</td>
+                            <td>merchant_Id <br>merchant_PubKey</td>
+                            <td>This will return a stellar xdr object for merchant to sign and submit
+                                <code>{"message":message from the protocol, "raw_xdr":stellar_xdr}</code></td>
+
+                        </tr>
+                        <tr>
+                            <td>POST</td>
+                            <td>/deposit</td>
+                            <td>amount <br>bankType <br>blockchainAddress <br>narration</td>
+                            <td>This is an endpoint for Users to deposit fiat to the protocol, This Will return an IFP details for deposit, 
+                                <code>{message: message from the protocol, memo:a stellar memo, amount:amount to send to IFP, fee:transaction fee, amount_to_pay:total amount to pay including fee, narration:transaction narration, Bank Name: IFP bank name, account_number:the IFP account Number, phoneNumber:the IFP phone number, eta:expected time of arrival}</code>. <em>JSON
+                                    response.</em></td>
+                        </tr>
+                        <tr>
+                            <td>GET</td>
+                            <td>/deposit</td>
+                            <td>bank_name <br>account_number <br>phone_number <br>blockchain_address<br>transaction_narration <br>amount</td>
+                            <td>endpoint to call for once deposit has been made to the IFP account details send earlier, this will return a message <code>{message:message from protocol}</code>
+                                parameter
+
+                        </tr>
+                        <tr>
+                            <td>GET</td>
+                            <td>/withdrawal</td>
+                            <td>bank_name <br>account_number <br>name_on_acct <br>phone_number <br>blockchain_address<br>transaction_narration <br>amount</td>
+                            <td>Endpoint for Users withdrawal of stablecoin in exchange for Fiat to the bank account specified the in request, <code>{message:message from protocol, blockchain_address:address user is expected to send their stablecoin to, deposit_asset_code:stablecoin asset code, deposit_asset_issuer:stablecoin asset issuer, memo:memo to attach to transaction, user_details:user_detail}</code> </td>
+                        </tr>
+                        <tr>
+                            <td>GET</td>
+                            <td>/merchant</td>
+                            <td>merchant_public_key</td>
+                            <td>Merchants use this endpoint to get list of all their pending transaction both for withdrawals and deposits
+                            this takes the merchant public key as arguments and return a list of pending transactions belonging to the merchants</td>
+                        </tr>
+                        <tr>
+                            <td>POST</td>
+                            <td>/merchant</td>
+                            <td>merchant_id <br>transaction_Id <br>merchant_pubKey</td>
+                            <td>Endpoint returns an xdr that needs to be signed and submitted to the blockchain by the merchants, we provide an endpoint to submit transactions</td>
+                        </tr>
+                        <tr>
+                            <td>GET</td>
+                            <td>/accounts</td>
+                            <td>account_id</td>
+                            <td>Endpoint returns details of a given address, initial it would support only merchant and then all protocol users.</td>
+                        </tr>
+                        <!-- <tr>
+                            <td>GET</td>
+                            <td>/project/id</td>
+                            <td>id <br> Require as query parameter </td>
+                            <td>This will create a new project Object and return it in a JSON format </td>
+                        </tr>
+                        <tr>
+                            <td>POST</td>
+                            <td>/project</td>
+                            <td>name <br> description <br>note</td>
+                            <td>This will create a new project Object and return it in a JSON format </td>
+                        </tr>
+                        <tr>
+                            <td>PUT</td>
+                            <td>/project/id</td>
+                            <td>name <br> description <br>complete</td>
+                            <td>This will update an existing project with the specified id and return the update object
+                                in this format <code>{message:data}</code> </td>
+                        </tr>
+                        <tr>
+                            <td>PATCH</td>
+                            <td>/project/id</td>
+                            <td>name <br> description <br>complete</td>
+                            <td>This will update an existing project with the specified id and return the update object
+                                in this format
+                                <code>{message:data}</code>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>DELETE</td>
+                            <td>/project/id</td>
+                            <td>id <br> Require as query parameter </td>
+                            <td>This will delete an existing project with the specified </td>
+                        </tr> -->
+                    </tbody>
+                </table>
+                <h3>Testing</h3>
+                <p>
+                    Test CRUD operations, Accept parameters, and construct requests with
+                    <a href="https://www.getpostman.com/" target="_blank">Postman</a>.
+                </p>
+                <h3>Suggestions / Contributions</h3>
+                <p>
+                    All suggestions are welcome. This simple RESTful API is intended to be an
+                    example web service for students.
+                </p>
+                <a href="https://github.com/garantor/NodeVGG" target="_blank">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="https://twitter.com/Har4labiM" target="_blank">
+                    <i class="fab fa-twitter-square"></i>
+                </a>
+                <a href="https://www.linkedin.com/in/afolabisunday/" target="_blank">
+                    <i class="fab fa-linkedin"></i>
+                </a>
+            </section>
+            <section>
+                <h3>Thanks</h3>
+                <p>Special thanks to <a href="https://twitter.com/yesdavidgray" target="_blank"> Gray </a> for Providing
+                    us with this template. </p>
+            </section>
+        </section>
+    </main>
+</body>
+
+</html>

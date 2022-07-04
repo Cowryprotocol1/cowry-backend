@@ -3,7 +3,7 @@ import logging
 from typing import TypeVar
 from decouple import config
 from stellar_sdk import Keypair, Asset, Signer, AuthorizationFlag, TransactionBuilder, Network, Server, Account, Transaction
-
+from stellar_sdk.exceptions import BadRequestError
 
 XDR = TypeVar('XDR')
 
@@ -19,39 +19,48 @@ class Deployment():
     6. 
     """
 
-    def __init__(self, _horizon_network) -> None:
+    def __init__(self, _horizon_network, _genesis_signer="SAZ2I2EAO44MNY7OUBV2ONR22OSNWU2LW4AFVYLKFB2A7RZR7B5AJZHI",) -> None:
         self.Keys_to_create = {}
         self.NETWORK = _horizon_network
-        self.Genesis_acct = "SAZ2I2EAO44MNY7OUBV2ONR22OSNWU2LW4AFVYLKFB2A7RZR7B5AJZHI"
-        # self.STAKING_CODE = "USDC"
-        # self.STAKING_ISSUER = "GATEMHCCKCY67ZUCKTROYN24ZYT5GK4EQZ65JJLDHKHRUZI3EUEKMTCH"
+        self.Genesis_acct = _genesis_signer
 
-
-        # self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = config(
-        #     "STAKING_ADDRESS_SIGNER")
-        # self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = config(
-        #     "ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER")
-        # self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = config(
-        #     "STABLECOIN_ASSET_SIGNER")
-        # self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = config(
-        #     "DELEGATED_SIGNER_ADDRESS")
-        # self.Keys_to_create["PROTOCOL_SIGNER"] = config("PROTOCOL_SIGNER")
-
-        self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = Keypair.random().secret
-        self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = Keypair.random().secret
-        self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = Keypair.random().secret
-        self.Keys_to_create["PROTOCOL_SIGNER"] = Keypair.random().secret
-        self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = Keypair.random().secret
-        self.Keys_to_create["USDC_TESTING"] = Keypair.random().secret
+      
 
         if self.NETWORK == "testnet":
             self.server = Server("https://horizon-testnet.stellar.org")
             self._networkPassPhrase = Network.TESTNET_NETWORK_PASSPHRASE
+            self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = config("STAKING_ADDRESS_SIGNER")
+            self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = config("ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER")
+            self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = config("STABLECOIN_ASSET_SIGNER")
+            self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = config("DELEGATED_SIGNER_ADDRESS")
+            self.Keys_to_create["PROTOCOL_SIGNER"] = config("PROTOCOL_SIGNER")
+            self.Keys_to_create["USDC_TESTING"] = config("USDC_TESTING_SIGNER")
+            # try:
+
+            gen_pub = Keypair.from_secret(self.Genesis_acct)
+            self.create_account_with_friendBot(gen_pub.public_key)
+            # except 
+
         elif self.NETWORK == "mainnet":
+            self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = Keypair.random().secret
+            self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = Keypair.random().secret
+            self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = Keypair.random().secret
+            self.Keys_to_create["PROTOCOL_SIGNER"] = Keypair.random().secret
+            self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = Keypair.random().secret
             self.server = Server("https://horizon.stellar.org")
             self._networkPassPhrase = Network.PUBLIC_NETWORK_PASSPHRASE
             logging.critical("This is a public network, you need to comment out some lines in the code")
             raise Exception("This is the mainnet, seems you forgot to comment out some lines in the code")
+        elif self.NETWORK == "Testing":
+            print("Testing")
+            # self.server = Server("https://horizon-testnet.stellar.org")
+            # self._networkPassPhrase = Network.TESTNET_NETWORK_PASSPHRASE
+            # self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = "SDFFBZUP3U2VCOI2LJN354GOSFCBL3ZVLGFWG4DDHUVL67XCZAD72TMB"
+            # self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = "SC5HTPDFAYWCA23FDWG543WPQFYEKMIEBVWGZMI65GXLVQ3DMDXP2I4K"
+            # self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = "SCHLSJTQI2XT2BUCBUNHY7BIXSUKSFY6ILR5DFWXBA7SDMRAY4VCQ7PO"
+            # self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = "SDUJZ2YNADC6IJC4IB3AB63TDPQCMKX6RT622H3RG2NZWDXK6CIJWYDJ"
+            # self.Keys_to_create["PROTOCOL_SIGNER"] = "SDQD6F7MFYGEIMH4SZZAV4E5FNQKTCPJ7FSXOIMRLN4AODEH4VWNBQDA"
+            # self.Keys_to_create["USDC_TESTING"] = "SCYQ6OEGJJ4I44AZEYXZRSIGBYXGUNOIS3PSU53QGQ7LAWI67RYYKF6B"
 
         self.genesis_signer = Keypair.from_secret(
             self.Genesis_acct)
@@ -73,7 +82,7 @@ class Deployment():
 
         print("************************************************************************************************************************")
         # creating all assets for protocol
-        ngn_asset = self.create_asset("NGN",            Keypair.from_secret(
+        ngn_asset = self.create_asset("NGN", Keypair.from_secret(
             self.Keys_to_create["STABLECOIN_ASSET_SIGNER"]).public_key)
         allowed_asset = self.create_asset("NGNALLOW",   Keypair.from_secret(
             self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"]).public_key)
@@ -186,7 +195,8 @@ class Deployment():
         ).set_timeout(30).build())
 
         transaction.sign(signer_keypair)
-        self.server.submit_transaction(transaction)
+        submitted_tx = self.server.submit_transaction(transaction)
+        return submitted_tx
         # print(pub_key, "Has been successfully created")
 
     def create_account(self) -> XDR:
@@ -198,10 +208,14 @@ class Deployment():
         for i in range(len(self.Keys_to_create)):
             _value = list(self.Keys_to_create.values())[i]
             pub_key = Keypair.from_secret(_value).public_key
-            create = self.create_a_valid_blockchain_account(pub_key)
-
-            _keys = list(self.Keys_to_create.keys())[i]
-            print({_keys:pub_key}, "Has been successfully created")
+            try:
+                create = self.create_a_valid_blockchain_account(pub_key)
+            except BadRequestError:
+                print("Address already created")
+            # print(create)
+            else:
+                _keys = list(self.Keys_to_create.keys())[i]
+                print({_keys:pub_key}, "Has been successfully created")
         # pass
 
     def set_flags_authorization_on_an_address(self, signer: str):
@@ -371,6 +385,17 @@ class Deployment():
         submitted_transaction = self.server.submit_transaction(daoTransaction)
         # print(submitted_transaction)
         return submitted_transaction
+
+    def create_account_with_friendBot(self, pub_key: str):
+        import requests
+        url = "https://friendbot.stellar.org"
+        response = requests.get(url, params={"addr": pub_key})
+        if response.status_code == 200:
+            return pub_key
+        elif response.status_code == 500:
+            raise BadRequestError("seems account has been created")
+
+
 
 
 if __name__ == "__main__":

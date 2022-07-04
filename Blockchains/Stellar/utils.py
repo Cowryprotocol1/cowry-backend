@@ -6,7 +6,7 @@ from stellar_sdk import Account
 from django.core.exceptions import ValidationError
 from stellar_sdk.server import Server
 from decouple import config
-
+from .operations import is_account_valid, STABLECOIN_CODE
 
 horizon_server = Server(horizon_url=config("HORIZON_URL"))
 
@@ -19,15 +19,27 @@ def check_stellar_address(value):
     else:
         return value
 
+
+def check__asset_code_For_stable(value: str):
+    if value != STABLECOIN_CODE:
+        raise ValidationError("Invalid asset code for protocol supported stablecoin")
+    elif value == STABLECOIN_CODE:
+        return value
+    else:
+        raise ValidationError("Invalid Stellar Address")
 def check_address_balance(address:str, asset_issuer:str, asset_code:str, check_amt:float) -> bool:
-    bal = horizon_server.accounts().account_id(address).call()
-    for bal in bal['balances']:
-        if bal["asset_type"] != "native" and bal['asset_code'] == asset_code and bal['asset_issuer'] == asset_issuer:
-            if float(bal['balance']) >= float(check_amt):
-                # print(bal["balance"])
-                return True
-            else:
-                pass
+    try:
+        bal = horizon_server.accounts().account_id(address).call()
+    except Exception as Err:
+        return False
+    else:
+        for bal in bal['balances']:
+            if bal["asset_type"] != "native" and bal['asset_code'] == asset_code and bal['asset_issuer'] == asset_issuer:
+                if float(bal['balance']) >= float(check_amt):
+                    # print(bal["balance"])
+                    return True
+                else:
+                    pass
     return False
 
 

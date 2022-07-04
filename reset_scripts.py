@@ -32,18 +32,30 @@ def create_a_valid_blockchain_account(pub_key: str):
     response = requests.get(url, params={"addr": pub_key})
     if response.status_code == 200:
         return pub_key
-    else:
-        pass
+    elif response.status_code == 500:
+        raise ValueError("seems account has been created")
+        
 
-    
+
+# adc = create_a_valid_blockchain_account(
+#     Keypair.from_secret(first_address).public_key)
+
+# print(adc)
 # uncommet this part to recreate those account on testnet
 
-# for i in range(len(Keys_to_create)):
-#     _keys = list(Keys_to_create.values())[i]
-#     pub_key = Keypair.from_secret(_keys).public_key
-#     create = create_a_valid_blockchain_account(pub_key)
+for i in range(len(Keys_to_create)):
+    _keys = list(Keys_to_create.values())[i]
+    pub_key = Keypair.from_secret(_keys).public_key
+    print(pub_key)
+    try:
+        create = create_a_valid_blockchain_account(pub_key)
+        print(list(pub_key), "Has been successfully created")
+    except Exception as Error:
+        print(Error)
+        break
+    else:
+        continue
 
-#     print(list(Keys_to_create.values())[i], "Has been successfully created")
 
 
 
@@ -79,7 +91,7 @@ def add_signer_to_acct(signer: str, account_address: str, memo="added signer to 
 
 class DAO_SETUP():
     """
-    This class is used to setup the DAO, the dao structure changes the protocol account to a mulitisig account
+    This class is used to setup the DAO, the dao structure changes the protocol account to a multisig account
     It also adds the protocol address to other address manage by the protocol.
     Protocol account will have a max threshold of 100 which will have max DAO member of 20 giving every member equal right of 5 weight
     For all addresses that the protocol is a signer for, the low threshold will be 50%, medium will be 60% while high threshold will be 80% of the max threshold of the DAO which is 100
@@ -171,9 +183,6 @@ class DAO_SETUP():
         submitted_transaction = get_horizon_server().submit_transaction(daoTransaction)
         # print(submitted_transaction)
         return submitted_transaction
-
-
-
 
 
 
