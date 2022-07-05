@@ -5,8 +5,6 @@ NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
 FEDERATION_SERVER="coming soon"
 TRANSFER_SERVER = "ourDomain/sep6"
 
-
-
 [DOCUMENTATION]
 ORG_NAME="Cowry Protocol"
 ORG_URL="coming soon"
