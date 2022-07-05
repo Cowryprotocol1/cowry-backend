@@ -12,7 +12,7 @@ from Blockchains.Stellar.operations import (
 from Blockchains.Stellar.utils import check_address_balance, check_stellar_address
 from decouple import config
 from django.db import IntegrityError
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from modelApp.models import (MerchantsTable, TokenTable, TransactionsTable,
                             TxHashTable)
 from modelApp.utils import (all_merchant_token_bal,
@@ -40,6 +40,7 @@ from .serializers import (EventSerializer, Fiat_Off_RampSerializer,
 from .utils import (PROTOCOL_COMMISSION, STAKING_TOKEN_ISSUER, Notifications,
                     isTransaction_Valid, merchants_to_process_transaction)
 from rest_framework.renderers import TemplateHTMLRenderer
+# from .renderers import TomlRenderer
 STAKING_TOKEN = config("STAKING_TOKEN_CODE")
 STAKING_ADDRESS = config("STAKING_ADDRESS")
 GENERAL_TRANSACTION_FEE = config("GENERAL_TRANSACTION_FEE")
@@ -694,14 +695,12 @@ class EventListener(APIView):
 
 #Stellar Toml
 class StellarToml(APIView):
-    # renderer_classes = [TemplateHTMLRenderer]
-    # template_name = 'Api/stellar.toml'
     def get(self, requests):
         import toml
         toml_config = toml.load("Api/templates/Api/stellar.toml")
         req_toml_config = toml.dumps(toml_config)
-        adc = req_toml_config
-        return Response(adc, status=status.HTTP_200_OK, content_type="application/text")
+        return HttpResponse(req_toml_config)
+        # return Response(req_toml_config, status=status.HTTP_200_OK, content_type="text/plain; charset=utf-8")
         # return req_toml_config
 
 @api_view(["GET"])
