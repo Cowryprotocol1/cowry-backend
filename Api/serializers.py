@@ -92,7 +92,7 @@ class Sep6DepositSerializer(serializers.Serializer):
     asset_code = serializers.CharField(
         max_length=20, min_length=3, required=True, allow_null=False, validators=[check__asset_code_For_stable])
     account = serializers.CharField(
-        max_length=56, min_length=56, required=True, allow_null=False)
+        min_length=56, max_length=56, required=True, allow_null=False)
     amount = serializers.FloatField(allow_null=True, required=True, min_value=1000.0)
     memo_type = serializers.CharField(allow_blank=True,
         max_length=56, min_length=2, required=False)

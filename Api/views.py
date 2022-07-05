@@ -669,33 +669,26 @@ class EventListener(APIView):
     def post(self, request):
         serializeEvent = EventSerializer(data=request.data)
         if serializeEvent.is_valid():
-            # print(serializeEvent.validated_data)
-            event_type = serializeEvent.validated_data.get("event_type")
-            if event_type == "merchant_staking":
-            # Check transaction memo if == an existing merchant
-                check_memo = is_transaction_memo_valid(request.data.get("memo"))
-                if check_memo == True:
-                    # pass transaction to isTransaction_Valid, which check the transaction hash
-                    print("we are here..........")
+            check_memo = is_transaction_memo_valid(request.data.get("memo"))
+            if check_memo == True:
+                event_type = serializeEvent.validated_data.get("event_type")
+                if event_type == "merchant_staking":
                     isTransaction_Valid.delay(transaction_hash=request.data.get(
                         "hash"), memo=request.data.get("memo"), _address=config("STAKING_ADDRESS"),  _asset_code=STAKING_TOKEN, _asset_issuer=STAKING_TOKEN_ISSUER, event_transaction_type="merchant_staking")
-                
-                    
                     return Response(serializeEvent.validated_data, status=status.HTTP_200_OK)
-                else:
-                    return Response({"error": "Invalid memo"}, status=status.HTTP_400_BAD_REQUEST)
-            elif event_type == "user_withdrawals":
-                isTransaction_Valid.delay(request.data.get("hash"), request.data.get(
-                    "memo"), _address=STABLECOIN_ISSUER, _asset_code=STABLECOIN_CODE, _asset_issuer=STABLECOIN_ISSUER, event_transaction_type="user_withdrawals")
-            
-            else:
-                pass
+
                 
-        
-            return Response(serializeEvent.validated_data, status=status.HTTP_200_OK)
+                elif event_type == "user_withdrawals":
+                    isTransaction_Valid.delay(request.data.get("hash"), request.data.get(
+                        "memo"), _address=STABLECOIN_ISSUER, _asset_code=STABLECOIN_CODE, _asset_issuer=STABLECOIN_ISSUER, event_transaction_type="user_withdrawals")
+                    return Response(serializeEvent.validated_data, status=status.HTTP_200_OK)
 
             
-
+                else:
+                    pass
+            else:
+                return Response({"error": "Invalid memo"}, status=status.HTTP_400_BAD_REQUEST)
+        
         return Response(serializeEvent.errors, status.HTTP_400_BAD_REQUEST)
 
 #Stellar Toml
