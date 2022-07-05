@@ -641,6 +641,11 @@ class AccountDetails(APIView):
         else:
             try:
                 merchant = get_merchant_by_pubKey(pub_key)
+                print(merchant)
+                print(merchant.UID)
+
+                print(".")
+                
             except MerchantsTable.DoesNotExist:
                 return Response({"msg":f"merchant with account id {pub_key} does not exist"}, status=status.HTTP_404_NOT_FOUND)
             else:
@@ -694,7 +699,10 @@ class StellarToml(APIView):
     def get(self, requests):
         import toml
         toml_config = toml.load("Api/templates/Api/stellar.toml")
-        return Response(toml_config, status=status.HTTP_200_OK)
+        req_toml_config = toml.dumps(toml_config)
+        adc = req_toml_config
+        return Response(adc, status=status.HTTP_200_OK, content_type="application/text")
+        # return req_toml_config
 
 @api_view(["GET"])
 def Sep6Deposit(requests):
