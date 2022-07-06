@@ -30,6 +30,8 @@ ALLOWED_HOSTS = ['localhost', 'stablemvp.herokuapp.com', '127.0.0.1']
 
 
 # Application definition
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -38,11 +40,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'modelApp',
     'Api',
-    'corsheaders',
-    # 'rest_framework.authtoken',
 ]
 
 # REST_FRAMEWORK = {
@@ -66,9 +67,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
 ]
-CORS_ORIGIN_ALLOW_ALL = True
+
 ROOT_URLCONF = 'stablecoin.urls'
 
 TEMPLATES = [
@@ -136,6 +136,7 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
