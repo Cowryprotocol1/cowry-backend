@@ -2,12 +2,12 @@
 
 
 NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
-FEDERATION_SERVER="coming soon"
-TRANSFER_SERVER = "ourDomain/sep6"
+#FEDERATION_SERVER="coming soon"
+TRANSFER_SERVER = "stablemvp.herokuapp.com/sep6"
 
 [DOCUMENTATION]
 ORG_NAME="Cowry Protocol"
-ORG_URL="coming soon"
+ORG_URL="stablemvp.herokuapp.com"
 ORG_LOGO="coming soon"
 ORG_DESCRIPTION="Decentralized Fiat backed stablecoin"
 #ORG_PHYSICAL_ADDRESS="123 Sesame Street, New York, NY 12345, United States"
@@ -34,7 +34,7 @@ is_unlimited = true
 is_asset_anchored = true
 anchor_asset_type = "fiat"
 anchor_asset = "NGN"
-info_server = "coming soon"
+info_server = "stablemvp.herokuapp.com/sep6/info"
 
 ###################################
 # Required compliance fields:

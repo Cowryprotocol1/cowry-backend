@@ -699,9 +699,8 @@ class StellarToml(APIView):
         import toml
         toml_config = toml.load("Api/templates/Api/stellar.toml")
         req_toml_config = toml.dumps(toml_config)
-        return HttpResponse(req_toml_config)
-        # return Response(req_toml_config, status=status.HTTP_200_OK, content_type="text/plain; charset=utf-8")
-        # return req_toml_config
+        return HttpResponse(req_toml_config, headers={'Content-Type':"text/plain; charset=utf-8"})
+     
 
 @api_view(["GET"])
 def Sep6Deposit(requests):

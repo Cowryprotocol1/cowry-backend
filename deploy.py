@@ -3,10 +3,11 @@ import logging
 from typing import TypeVar
 from decouple import config
 from stellar_sdk import Keypair, Asset, Signer, AuthorizationFlag, TransactionBuilder, Network, Server, Account, Transaction
-from stellar_sdk.exceptions import BadRequestError
+from stellar_sdk.exceptions import BadRequestError, BaseHorizonError
 
 XDR = TypeVar('XDR')
-
+domain = config("COWRY_DEFUALT_DOMAIN")
+print(domain)
 
 class Deployment():
     """
@@ -15,8 +16,9 @@ class Deployment():
     2. Add trustlines to All accounts
     3. setup assets and their flags(NGN, ALLOWED, LICENSE)
     4. place manage buy/sell order for NGN
-    5. Setup signature and their weight
-    6. 
+    5. set up domain using set_option
+    6. Setup signature and their weight
+    7. 
     """
 
     def __init__(self, _horizon_network, _genesis_signer="SAZ2I2EAO44MNY7OUBV2ONR22OSNWU2LW4AFVYLKFB2A7RZR7B5AJZHI",) -> None:
@@ -172,6 +174,10 @@ class Deployment():
         order_transaction = self.place_buy_order_for_token_against_another_token(
             self.Keys_to_create["STABLECOIN_ASSET_SIGNER"], allowed_asset.code, allowed_asset.issuer, "922337203685", ngn_asset.code, ngn_asset.issuer, "1")
         print("order placed for ngn against allowed", order_transaction["hash"])
+
+        print("************************************************************************************************************************")
+        # adding domain to stellar 
+        add_domain = self.add_domain_to_stellar()
 
         print("************************************************************************************************************************")
         #setting up multisig on all addresses
@@ -394,7 +400,21 @@ class Deployment():
             return pub_key
         elif response.status_code == 500:
             raise BadRequestError("seems account has been created")
+    
+    def add_domain_to_stellar(self, domain=domain):
+        issuing_account = self.server.load_account(self.genesis_signer.public_key)
+        transaction = TransactionBuilder(
+            source_account=issuing_account,
+            network_passphrase=self._networkPassPhrase,
+            base_fee=100,
+        ).append_set_options_op(
+            home_domain=domain
+        ).build()
 
+        transaction.sign(self.Genesis_acct)
+        self.server.submit_transaction(transaction)
+        return "asset domain successfully added to stellar"
+    
 
 
 
