@@ -78,8 +78,6 @@ class EventTest(TestSetUpClass):
 
         req_data = self.client.post(
             self.url, data=event_data, format="json")
-        print(req_data.data)
-        print(req_data.status_code)
         # # working on the event listener testing, how do we enable merching hash and memo
         self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
         self.assertEqual(req_data.status_code, 200)

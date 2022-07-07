@@ -34,6 +34,10 @@ _networkPassPhrase = Network.TESTNET_NETWORK_PASSPHRASE
 # merchant_keypair = Keypair.random()
 # general_keypair = Keypair.random()
 
+
+domain = config("COWRY_DEFUALT_DOMAIN")
+
+
 merchant_keypair = Keypair.from_secret(
     "SALS3ZKWQPXAR42KA4X553H7ENMW2PY4X6ZHFB2I3JIZ3XQUH7DPBO63")
 

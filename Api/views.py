@@ -152,7 +152,6 @@ class OnBoardMA(APIView):
                     # TransactionsTable.objects.create(merchant=merchant_saved)
                 
                 except Exception as e:
-                    print(e)
                     # send to admins
                     return Response({"error": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
                 else:
@@ -219,7 +218,6 @@ class ON_RAMP_FIAT_USERS(APIView):
                             transaction_memo=MA_selected["merchant"]["UID"], phone_num=MA_selected["merchant"]["phoneNumber"], 
                             user_bank_account=MA_selected["merchant"]["bankAccount"], bank_name=MA_selected["merchant"]["bankName"], user_block_address=blockchainAddress)
                     except IntegrityError as e:
-                        print(e)
                         if 'UNIQUE constraint failed' in e.args[0]:
                             return Response({"error": "there is a pending payment with this narration, please update transaction narration"}, status=status.HTTP_400_BAD_REQUEST)
                         else:
@@ -354,7 +352,7 @@ class OFF_RAMP_FIAT(APIView):
                         ) 
                     
                     except IntegrityError as e:
-                        print(e)
+                        # print(e)
                         if 'UNIQUE constraint failed' in e.args[0]:
                             return Response({"error": "there is a pending payment with this narration, please update transaction narration"}, status=status.HTTP_400_BAD_REQUEST)
                         else:
@@ -408,7 +406,7 @@ class OFF_BOARDING_MA(APIView):
             except MerchantsTable.DoesNotExist:
                 return Response({"error": "Merchant does not exist"}, status=status.HTTP_404_NOT_FOUND)
             except Exception as e:
-                print(e)
+                # print(e)
                 return Response({"error": "something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 try:
@@ -432,7 +430,7 @@ class OFF_BOARDING_MA(APIView):
                                                                 recipient_pub_key=merchant_PubKey, amount=round(float(token_balance.licenseTokenAmount), 7),
                                         memo=merchant_Id, exchange_rate=round(float(token_balance.stakedTokenExchangeRate), 7), total_staked_amt=round(float(token_balance.stakedTokenAmount), 7))
                                 except Exception as e:
-                                    print(e)
+                                    # print(e)
                                     return Response({"error": "something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
                                 else:
                                     logging.info("We need to handle situations were merchant failed to submit the transaction, maybe by moving the merchant to a state that is  not accessible by the api")
@@ -521,7 +519,7 @@ class MerchantDepositConfirmation(APIView):
                                     merchants_Id, deposit_withdrawal_Id)
                             except Exception as e:
                                 #notify admin
-                                print(e)
+                                # print(e)
                                 return Response({"error": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
                             else:
                                 #need to update transaction table hash for future refrences
@@ -534,7 +532,7 @@ class MerchantDepositConfirmation(APIView):
                             withdrawal_xdr = User_withdrawal_from_protocol(
                             merchant_pubKey, transaction.transaction_amount, str(deposit_withdrawal_Id), transaction.users_address)
                         except Exception as E:
-                            print(E)
+                            # print(E)
                             #notify admin
                             return Response({"error": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
                         else:
@@ -556,7 +554,7 @@ class MerchantDepositConfirmation(APIView):
                                     merchants_Id, deposit_withdrawal_Id)
                             except Exception as e:
                                 #notify admin
-                                print(e)
+                                # print(e)
                                 return Response({"error": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
                             else:
                                 #need to update transaction table hash for future refrences
@@ -614,7 +612,7 @@ class AllTokenTotalSupply(APIView):
                         "total_accounts": i["accounts"], "total_balance": i["balances"]}
                 
             except Exception as E:
-                print(E)
+                # print(E)
                 return Response({"error": f"getting details for this endpoint"}, status=status.HTTP_404_NOT_FOUND)
         
         return Response(_asset_supply, status=status.HTTP_200_OK)
@@ -637,15 +635,15 @@ class AccountDetails(APIView):
         try:
             pub_key = check_stellar_address(request.data.get("account_id"))
         except Exception as _a:
-            print(_a)
+            # print(_a)
             return Response({"msg": "Not a valid Stellar address"}, status=status.HTTP_400_BAD_REQUEST)
         else:
             try:
                 merchant = get_merchant_by_pubKey(pub_key)
-                print(merchant)
-                print(merchant.UID)
+                # print(merchant)
+                # print(merchant.UID)
 
-                print(".")
+                # print(".")
                 
             except MerchantsTable.DoesNotExist:
                 return Response({"msg":f"merchant with account id {pub_key} does not exist"}, status=status.HTTP_404_NOT_FOUND)
@@ -723,7 +721,6 @@ def Sep6Deposit(requests):
             MA_selected = merchants_to_process_transaction(
                 merchants_list.data, amount, bank=None)
             if MA_selected:
-                print(MA_selected)
                 try:
                     update_pending_transaction_model(
                         MA_selected["merchant"]["UID"], transaction_amt=str(float(amount) + float(GENERAL_TRANSACTION_FEE)), transaction_type="deposit", narration=transaction_narration,
@@ -788,7 +785,7 @@ def sep6Withdrawal(requests):
                                 bank_name=_data["dest_extra"],
                             ) 
         except Exception as Error:
-            print(Error)
+            # print(Error)
             #Notify admin
             return Response(Error.args, status=status.HTTP_400_BAD_REQUEST)
         else:

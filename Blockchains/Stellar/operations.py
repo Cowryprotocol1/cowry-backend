@@ -45,7 +45,7 @@ def Mint_Token(recipient: str, amount: int, memo: str) -> bool:
             recipient=recipient, memo=memo, amount=str(amount), asset_signer=ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER)
         return mint_token_existing
     else:
-        print("minting token to a new address")
+        # print("minting token to a new address")
         logging.info(
             "Minting to a new address")
 
@@ -74,7 +74,7 @@ def is_account_valid(account_address: str) -> bool:
         else:
             return False
     except Exception as e:
-        print(e)
+        # print(e)
         return False
 
 # check if a given asset is trusted by an account
@@ -88,7 +88,6 @@ def is_Asset_trusted(address: str, asset_number=2, issuerAddress=ALLOWED_AND_LIC
         xlm_balance = []
         for i in balances:
             if i["asset_type"] == "native":
-                print(i["balance"])
                 xlm_balance.append(i["balance"])
 
             if i["asset_type"] != "native" and i["asset_issuer"] == issuerAddress:
@@ -101,7 +100,7 @@ def is_Asset_trusted(address: str, asset_number=2, issuerAddress=ALLOWED_AND_LIC
         else:
             return [False, 0.0]
     except Exception as e:
-        print(e)
+        # print(e)
         return [False, 0.0]
 
 

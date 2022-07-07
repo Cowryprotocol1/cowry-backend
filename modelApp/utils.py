@@ -41,13 +41,13 @@ def add_and_update_transaction_hash(_hash:str, merchant_id:str) -> bool:
                 merchant.save()
                 return True
             elif merchant.is_processed == True:
-                print("merchant Tx already processed")
+                # print("merchant Tx already processed")
                 # print(merchan)
                 # merchant found but hash already processed
                 return False
             else:
-                print("merchant Tx already processed")
-                print("This is the value of merchant.is_processed", merchant.is_processed)
+                # print("merchant Tx already processed")
+                # print("This is the value of merchant.is_processed", merchant.is_processed)
                 # print(merchan)
                 # merchant found but hash already processed
                 return False
@@ -81,7 +81,7 @@ def update_merchant_by_allowedLicenseAmount(merchant_id:str, allowedLicenseAmt:i
         merchant_bal.save() 
         return True
     except Exception as e:
-        print(e.args)
+        # print(e.args)
         # notify admin
         return e.args
 
