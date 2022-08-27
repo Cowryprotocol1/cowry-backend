@@ -155,7 +155,7 @@ class OnBoardMA(APIView):
                     # send to admins
                     return Response({"error": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    data = {"memo": merchant_saved.UID, "staking_address": staking_address,
+                    data = {"msg":f"please send {STABLECOIN_CODE} to the below details","memo": merchant_saved.UID, "staking_address": staking_address,
                             "staking_asset_code": STAKING_TOKEN, "staking_asset_issuer": STAKING_TOKEN_ISSUER,
                             "user_details": serializeMA.validated_data}
                     return Response(data, status=status.HTTP_201_CREATED)

@@ -25,6 +25,6 @@ if __name__ == '__main__':
     logging.critical("Handle fee for withdrawal from the protocol")
     logging.critical("You need to start redis-server")
     logging.critical("connect celery with command'celery -A stablecoin worker -l INFO'")
-    logging.critical("start event listener for staking")
-    logging.critical("start event listener for withdrawals")
+    
+    
     main()

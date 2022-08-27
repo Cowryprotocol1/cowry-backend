@@ -203,6 +203,9 @@ def Notifications(recipient_email, subject, message):
             "text": message})
 
 
+
+
+
 # mail = Notifications("sundayafolabi992@gmail.com")
 # print(mail.status_code)
 # print(mail.content.decode("utf-8"))
