@@ -1,8 +1,5 @@
 from datetime import datetime
-import secrets
-from time import time
-from celery import shared_task
-from Blockchains.Stellar.operations import get_horizon_server
+from Blockchains.Stellar.operations import get_horizon_server, STABLECOIN_CODE, STABLECOIN_ISSUER
 from modelApp.models import PeriodicTaskRun
 from django.utils import timezone
 from decouple import config as env_config
@@ -20,15 +17,16 @@ def transaction_list(staking_address=env_config("STAKING_ADDRESS"), withdrawal_a
     print("===================================")
     new_time = timezone.now()
     PeriodicTaskRun.objects.update(created_at=new_time)
+    horizon_server = get_horizon_server()
     try:
-        horizon_server = get_horizon_server()
-        transactions_ = horizon_server.transactions().for_account(staking_address).limit(200).call()
-        # transactions_ = horizon_server.transactions().for_account(account).limit(200).call()
+        staking_transaction = horizon_server.transactions().for_account(staking_address).limit(200).call()
+        withdrawal_transaction = horizon_server.transactions().for_account(withdrawal_address).limit(200).call()
     except Exception as err:
         #notify admin
         print(err)
     else:
-        for transaction in transactions_["_embedded"]["records"]:
+        #handles MA that just staked with the protocol to start processing transactions
+        for transaction in staking_transaction["_embedded"]["records"]:
             try:
                 hash_ = transaction["hash"]
                 tx_time = transaction["created_at"]
@@ -40,10 +38,40 @@ def transaction_list(staking_address=env_config("STAKING_ADDRESS"), withdrawal_a
                 #notify admin
                 pass
             splitted_date_time = tx_time.replace("T", " ")
-            transaction_time = datetime.strptime(splitted_date_time.split("Z")[0], "%Y-%m-%d %H:%M:%S")
-            if  transaction_time >= datetime.strptime(last_updated_time, "%Y-%m-%d %H:%M:%S"):
+            stake_transaction_time = datetime.strptime(splitted_date_time.split("Z")[0], "%Y-%m-%d %H:%M:%S")
+            if  stake_transaction_time >= datetime.strptime(last_updated_time, "%Y-%m-%d %H:%M:%S"):
                 print("forward one to celery")
                 isTransaction_Valid.delay(transaction_hash=hash_, memo=tx_memo)
+    try:
+        withdrawal_transaction = horizon_server.transactions().for_account(withdrawal_address).limit(200).call()
+    except Exception as err:
+        #notify admin
+        print(err)
+    else:
+        #Handles MA that want to leave the protocol
+        for transaction in withdrawal_transaction["_embedded"]["records"]:
+            try:
+                staked_tx_hash_ = transaction["hash"]
+                staked_tx_time = transaction["created_at"]
+                staked_tx_memo = transaction["memo"]
+            except KeyError:
+                #transaction does not have a memo
+                pass
+            except Exception as error:
+                #notify admin
+                pass
+            stake_splitted_date_time = staked_tx_time.replace("T", " ")
+            staked_transaction_time = datetime.strptime(stake_splitted_date_time.split("Z")[0], "%Y-%m-%d %H:%M:%S")
+            if  staked_transaction_time >= datetime.strptime(last_updated_time, "%Y-%m-%d %H:%M:%S"):
+                print("forward one to staked_transaction_time")
+                isTransaction_Valid.delay(
+                        transaction_hash=staked_tx_hash_,
+                        memo=staked_tx_memo,
+                        _address=STABLECOIN_ISSUER,
+                        _asset_code=STABLECOIN_CODE,
+                        _asset_issuer=STABLECOIN_ISSUER,
+                        event_transaction_type="user_withdrawals",
+                    )
     print("===================================")
     
         
