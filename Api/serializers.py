@@ -108,3 +108,7 @@ class Sep6WithdrawalSerializer(serializers.Serializer):
     amount = serializers.FloatField(allow_null=True, required=False, min_value=1000.0)
     dest = serializers.CharField(required=True, validators=[check_account_numberLen])
     dest_extra = serializers.CharField(min_length=2, max_length=20, required=True)
+
+
+class XdrSerializer(serializers.Serializer):
+    signed_xdr = serializers.CharField(required=True)

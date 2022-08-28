@@ -32,7 +32,7 @@ from stellar_sdk import TransactionEnvelope, TrustLineFlags
 
 from utils.utils import uidGenerator
 
-from .serializers import (EventSerializer, Fiat_Off_RampSerializer,
+from .serializers import (EventSerializer, Fiat_Off_RampSerializer, XdrSerializer,
                           Fiat_On_RampSerializer, MerchantsTableSerializer,
                           OffBoard_A_MerchantSerializer, TokenTableSerializer,
                           TransactionSerializer,
@@ -699,6 +699,24 @@ class StellarToml(APIView):
         req_toml_config = toml.dumps(toml_config)
         return HttpResponse(req_toml_config, headers={'Content-Type':"text/plain; charset=utf-8"})
      
+class SubmitAnXdr(APIView):
+    def post(self, request):
+        xdr_object = XdrSerializer(data=request.data)
+        if xdr_object.is_valid():
+            #submit
+            server_ = get_horizon_server()
+
+            str_xdr = xdr_object.data.get("signed_xdr")
+            transactionEnvelop = TransactionEnvelope.from_xdr(str_xdr, get_network_passPhrase())
+            tx_signature = transactionEnvelop.signatures
+            if len(tx_signature) < 1:
+                return Response({"msg":"unsigned transaction"}, status=status.HTTP_400_BAD_REQUEST)
+            elif len(tx_signature) > 1:
+                tx_submit = server_.submit_transaction(transactionEnvelop, skip_memo_required_check=True)
+                return Response({"msg":"see transaction details below", "transaction_response":tx_submit}, status.HTTP_200_OK)
+        else:
+            return Response(xdr_object.errors, status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(["GET"])
 def Sep6Deposit(requests):
@@ -801,3 +819,5 @@ def sep6Withdrawal(requests):
         return Response(data, status=status.HTTP_200_OK)
     else:
         return Response(serializer_Data.errors, status=status.HTTP_400_BAD_REQUEST)
+
+

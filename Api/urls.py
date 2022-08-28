@@ -18,6 +18,8 @@ urlpatterns = [
     path(".well-known/stellar.toml", StellarToml.as_view(), name="toml_endpoint"),
     path("sep6/deposit", Sep6Deposit, name="sep6Deposit"),
     path("sep6/info", sepInfo, name="sep6Info"),
-    path("sep6/withdraw", sep6Withdrawal, name="sep6Withdraw")
+    path("sep6/withdraw", sep6Withdrawal, name="sep6Withdraw"),
+    path("submit_xdr", SubmitAnXdr.as_view(), name="submitxdr"),
+
 
 ]

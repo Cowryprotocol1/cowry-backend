@@ -12,7 +12,7 @@ from Api.utils import isTransaction_Valid
 
 
 # @shared_task(bind=True)
-def transaction_list(account=env_config("STAKING_ADDRESS")):
+def transaction_list(staking_address=env_config("STAKING_ADDRESS"), withdrawal_address=env_config("STABLECOIN_ISSUER")):
     test = PeriodicTaskRun.objects.latest("created_at")
 
     last_updated_time = test.created_at.strftime("%Y-%m-%d %H:%M:%S")
@@ -22,7 +22,8 @@ def transaction_list(account=env_config("STAKING_ADDRESS")):
     PeriodicTaskRun.objects.update(created_at=new_time)
     try:
         horizon_server = get_horizon_server()
-        transactions_ = horizon_server.transactions().for_account(account).limit(200).call()
+        transactions_ = horizon_server.transactions().for_account(staking_address).limit(200).call()
+        # transactions_ = horizon_server.transactions().for_account(account).limit(200).call()
     except Exception as err:
         #notify admin
         print(err)
