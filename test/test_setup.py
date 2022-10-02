@@ -1,4 +1,9 @@
-import logging
+import django
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'stablecoin.settings')
+django.setup()
+
+# the above for drf test using the test extension
 from decouple import config
 
 from rest_framework.test import APITestCase
@@ -35,7 +40,7 @@ _networkPassPhrase = Network.TESTNET_NETWORK_PASSPHRASE
 # general_keypair = Keypair.random()
 
 
-domain = config("COWRY_DEFUALT_DOMAIN")
+domain = config("COWRY_DEFAULT_DOMAIN")
 
 
 merchant_keypair = Keypair.from_secret(

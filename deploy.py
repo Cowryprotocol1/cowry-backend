@@ -6,7 +6,7 @@ from stellar_sdk import Keypair, Asset, Signer, AuthorizationFlag, TransactionBu
 from stellar_sdk.exceptions import BadRequestError, BaseHorizonError
 
 XDR = TypeVar('XDR')
-domain = config("COWRY_DEFUALT_DOMAIN")
+domain = config("COWRY_DEFAULT_DOMAIN")
 print(domain)
 
 class Deployment():
@@ -44,13 +44,13 @@ class Deployment():
             # except 
 
         elif self.NETWORK == "mainnet":
-            self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = Keypair.random().secret
-            self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = Keypair.random().secret
-            self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = Keypair.random().secret
-            self.Keys_to_create["PROTOCOL_SIGNER"] = Keypair.random().secret
-            self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = Keypair.random().secret
-            self.server = Server("https://horizon.stellar.org")
-            self._networkPassPhrase = Network.PUBLIC_NETWORK_PASSPHRASE
+            # self.Keys_to_create["STAKING_ADDRESS_SIGNER"] = Keypair.random().secret
+            # self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"] = Keypair.random().secret
+            # self.Keys_to_create["DELEGATED_SIGNER_ADDRESS"] = Keypair.random().secret
+            # self.Keys_to_create["PROTOCOL_SIGNER"] = Keypair.random().secret
+            # self.Keys_to_create["STABLECOIN_ASSET_SIGNER"] = Keypair.random().secret
+            # self.server = Server("https://horizon.stellar.org")
+            # self._networkPassPhrase = Network.PUBLIC_NETWORK_PASSPHRASE
             logging.critical("This is a public network, you need to comment out some lines in the code")
             raise Exception("This is the mainnet, seems you forgot to comment out some lines in the code")
         elif self.NETWORK == "Testing":
@@ -78,7 +78,7 @@ class Deployment():
 
 
     def startSetUP(self):
-        setting up all accounts
+        # setting up all accounts
         acct = self.create_account()
         print("All accounts have been created", acct)
 
@@ -101,13 +101,15 @@ class Deployment():
         # adding trustline to asset for both allowed on stablecoin_address and for stablecoin on protocol_address
         trustline_for_allowed_on_stablecoin = self.add_trustline(
             allowed_asset.code, allowed_asset.issuer, self.Keys_to_create["STABLECOIN_ASSET_SIGNER"])
+        print("trustline for allowed on stablecoin created with this hash", trustline_for_allowed_on_stablecoin["hash"])
+
         trustline_for_ngn_on_protocol_addr = self.add_trustline(
             ngn_asset.code, ngn_asset.issuer, self.Keys_to_create["PROTOCOL_SIGNER"])
+        print("trustline for ngn on protocol addr created with this hash ", trustline_for_ngn_on_protocol_addr["hash"])
+        
 
         trustline_for_ngn_on_staking_address = self.add_trustline(
             usdc_testing.code, usdc_testing.issuer, self.Keys_to_create["STAKING_ADDRESS_SIGNER"])
-        print("trustline for allowed on stablecoin created with this hash", trustline_for_allowed_on_stablecoin["hash"])
-        print("trustline for ngn on protocol addr created with this hash ", trustline_for_ngn_on_protocol_addr["hash"])
         print("trustline for ngn on staking address created with this hash ", trustline_for_ngn_on_staking_address["hash"])
 
 
@@ -115,34 +117,40 @@ class Deployment():
         # adding trustline to genesis address
         ngn_trustline_genesis = self.add_trustline(
             ngn_asset.code, ngn_asset.issuer,  self.genesis_signer.secret)
+        print("trustline for ngn on genesis addr created ", ngn_trustline_genesis["hash"])
+        
         allowed_trustline_genesis = self.add_trustline(
             allowed_asset.code, allowed_asset.issuer, self.genesis_signer.secret)
+        print("trustline for allowed on genesis addr ", allowed_trustline_genesis["hash"])
+
         license_trustline_genesis = self.add_trustline(
             license_asset.code, license_asset.issuer,  self.genesis_signer.secret)
+        print("trustline for license on genesis addr ", license_trustline_genesis["hash"])
+        
 
         usdc_trustline_genesis = self.add_trustline(
             usdc_testing.code, usdc_testing.issuer,  self.genesis_signer.secret)
 
-        print("trustline for ngn on genesis addr created ", ngn_trustline_genesis["hash"])
-        print("trustline for allowed on genesis addr ", allowed_trustline_genesis["hash"])
-        print("trustline for license on genesis addr ", license_trustline_genesis["hash"])
         print("trustline for license on genesis addr ", usdc_trustline_genesis["hash"])
 
         print("************************************************************************************************************************")
         #creating assets by sending payment tx
         genesis_ngn_payment = self.send_payment(
             ngn_asset.code, ngn_asset.issuer,   self.genesis_signer.public_key, "10", self.Keys_to_create["STABLECOIN_ASSET_SIGNER"])
+        print("payment for ngn on genesis addr ", genesis_ngn_payment["hash"])
+        
         genesis_allow_payment = self.send_payment(allowed_asset.code, allowed_asset.issuer,
                                                 self.genesis_signer.public_key, "10", self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"])
+        print("payment for allowed on genesis addr ", genesis_allow_payment["hash"])
+        
         genesis_ngnLicense_payment = self.send_payment(license_asset.code, license_asset.issuer,
                                                 self.genesis_signer.public_key, "10", self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"])
 
+        print("payment for license on genesis addr ", genesis_ngnLicense_payment["hash"])
+        
         genesis_usdc_payment = self.send_payment(usdc_testing.code, usdc_testing.issuer,
                                                 self.genesis_signer.public_key, "10", self.Keys_to_create["USDC_TESTING"])
         
-        print("payment for ngn on genesis addr ", genesis_ngn_payment["hash"])
-        print("payment for allowed on genesis addr ", genesis_allow_payment["hash"])
-        print("payment for license on genesis addr ", genesis_ngnLicense_payment["hash"])
         print("payment for USDC on genesis addr ", genesis_usdc_payment["hash"])
 
 
@@ -150,17 +158,19 @@ class Deployment():
         # clear payment send by sending payment back to respective issuers
         license_clear_payment = self.send_payment(license_asset.code, license_asset.issuer,    Keypair.from_secret(
             self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"]).public_key, "10", self.genesis_signer.secret)
+        print("clear payment for license on genesis addr ", license_clear_payment["hash"])
+        
         allowed_clear_payment = self.send_payment(allowed_asset.code, allowed_asset.issuer,    Keypair.from_secret(
             self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"]).public_key, "10", self.genesis_signer.secret)
+        print("clear payment for allowed on genesis addr ", allowed_clear_payment["hash"])
+        
         ngn_clear_payment = self.send_payment(ngn_asset.code, ngn_asset.issuer,            Keypair.from_secret(
             self.Keys_to_create["STABLECOIN_ASSET_SIGNER"]).public_key, "10", self.genesis_signer.secret)
+        print("clear payment for ngn on genesis addr ", ngn_clear_payment["hash"])
         
         usdc_clear_payment = self.send_payment(usdc_testing.code, usdc_testing.issuer,            Keypair.from_secret(
             self.Keys_to_create["USDC_TESTING"]).public_key, "10", self.genesis_signer.secret)
 
-        print("clear payment for ngn on genesis addr ", ngn_clear_payment["hash"])
-        print("clear payment for allowed on genesis addr ", allowed_clear_payment["hash"])
-        print("clear payment for license on genesis addr ", license_clear_payment["hash"])
         print("clear payment for USDC on genesis addr ", usdc_clear_payment["hash"])
 
         print("************************************************************************************************************************")

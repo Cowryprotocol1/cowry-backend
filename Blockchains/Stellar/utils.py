@@ -6,7 +6,7 @@ from stellar_sdk import Account
 from django.core.exceptions import ValidationError
 from stellar_sdk.server import Server
 from decouple import config
-from .operations import is_account_valid, STABLECOIN_CODE
+from .operations import is_account_valid, STABLECOIN_CODE, ALLOWED_AND_LICENSE_P_ADDRESS, ALLOWED_TOKEN_CODE, STABLECOIN_ISSUER
 
 horizon_server = Server(horizon_url=config("HORIZON_URL"))
 
@@ -42,8 +42,30 @@ def check_address_balance(address:str, asset_issuer:str, asset_code:str, check_a
                     pass
     return False
 
+def protocolAssetTotalSupply(assets:dict = {ALLOWED_AND_LICENSE_P_ADDRESS: ALLOWED_TOKEN_CODE,
+            STABLECOIN_ISSUER: STABLECOIN_CODE}):
+    """Use to get the total supply of protocol supply"""
+    # accts = {
+    #         ALLOWED_AND_LICENSE_P_ADDRESS: ALLOWED_TOKEN_CODE,
+    #         STABLECOIN_ISSUER: STABLECOIN_CODE,
+    #     }
 
+    _asset_supply = {}
+    for i in range(len(assets)):
+        _keys = list(assets.keys())[i]
+        _values = list(assets.values())[i]
+        try:
+            bala = horizon_server.assets().for_code(_values).for_issuer(_keys).call()
+            for i in bala["_embedded"]["records"]:
+                _asset_supply[_values] = {
+                    "total_accounts": i["accounts"],
+                    "total_balance": i["balances"],
+                }
 
+        except Exception as E:
+            # print(E)
+            raise Exception("error getting details from this endpoint")
+    return _asset_supply
 # print(check_address_balance(
 #     "GDUOMP2S62CUUCR2ZP3IRCATCCTII77G7ES52K4QAHYPX63GDZJ3QUIP", "GC54NAZBATJECJIXV6VQ7UV2NUR5N33NA7FY5NDKSKEZRD57KSUUGXV3", "NGN", 1000))
     

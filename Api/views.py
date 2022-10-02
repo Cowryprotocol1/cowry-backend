@@ -17,7 +17,7 @@ from Blockchains.Stellar.operations import (
     get_horizon_server,
     merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor,
 )
-from Blockchains.Stellar.utils import check_address_balance, check_stellar_address
+from Blockchains.Stellar.utils import check_address_balance, check_stellar_address, protocolAssetTotalSupply
 from decouple import config
 from django.db import IntegrityError
 from django.http import JsonResponse, HttpResponse
@@ -41,6 +41,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from stellar_sdk import TransactionEnvelope, TrustLineFlags
+from stellar_sdk.exceptions import NotFoundError, BadRequestError, BadResponseError
 
 from utils.utils import uidGenerator
 
@@ -426,7 +427,7 @@ class OFF_RAMP_FIAT(APIView):
                 try:
 
                     transaction_p = update_PendingTransaction_Model(
-                        transaction_amt=_data["amount"],
+                        transaction_amt=float(_data["amount"]) + float(GENERAL_TRANSACTION_FEE),
                         transaction_type="withdraw",
                         narration=_data["transaction_narration"],
                         transaction_hash=None,
@@ -437,7 +438,7 @@ class OFF_RAMP_FIAT(APIView):
                     )
 
                 except IntegrityError as e:
-                    # print(e)
+                    print(e)
                     if "UNIQUE constraint failed" in e.args[0]:
                         return Response(
                             {
@@ -506,7 +507,7 @@ class OFF_BOARDING_MA(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
             except Exception as e:
-                # print(e)
+                print(e)
                 return Response(
                     {"error": "something went wrong"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -559,7 +560,7 @@ class OFF_BOARDING_MA(APIView):
                                         ),
                                     )
                                 except Exception as e:
-                                    # print(e)
+                                    print(e)
                                     return Response(
                                         {"error": "something went wrong"},
                                         status=status.HTTP_400_BAD_REQUEST,
@@ -831,33 +832,16 @@ class AllTokenTotalSupply(APIView):
     """
 
     def get(self, request):
-        server = get_horizon_server()
+        try:
+            assets_list = protocolAssetTotalSupply()
+        except Exception:
+            return Response(
+                {"error": f"error getting details for this endpoint"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        else:
 
-        accts = {
-            ALLOWED_AND_LICENSE_P_ADDRESS: ALLOWED_TOKEN_CODE,
-            STABLECOIN_ISSUER: STABLECOIN_CODE,
-        }
-
-        _asset_supply = {}
-        for i in range(len(accts)):
-            _keys = list(accts.keys())[i]
-            _values = list(accts.values())[i]
-            try:
-                bala = server.assets().for_code(_values).for_issuer(_keys).call()
-                for i in bala["_embedded"]["records"]:
-                    _asset_supply[_values] = {
-                        "total_accounts": i["accounts"],
-                        "total_balance": i["balances"],
-                    }
-
-            except Exception as E:
-                # print(E)
-                return Response(
-                    {"error": f"getting details for this endpoint"},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-
-        return Response(_asset_supply, status=status.HTTP_200_OK)
+            return Response(assets_list, status=status.HTTP_200_OK)
 
         # supply of allowed Token
         # supply of licxense token
@@ -991,17 +975,22 @@ class SubmitAnXdr(APIView):
                 return Response(
                     {"msg": "unsigned transaction"}, status=status.HTTP_400_BAD_REQUEST
                 )
-            elif len(tx_signature) > 1:
-                tx_submit = server_.submit_transaction(
+            elif len(tx_signature) >= 1:
+                try:
+                    tx_submit = server_.submit_transaction(
                     transactionEnvelop, skip_memo_required_check=True
                 )
-                return Response(
-                    {
-                        "msg": "see transaction details below",
-                        "transaction_response": tx_submit,
-                    },
-                    status.HTTP_200_OK,
-                )
+                except (NotFoundError, BadRequestError, BadResponseError) as tx_error:
+                    # print(tx_error)
+                    return Response({"msg":"there is an error with this transaction"}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response(
+                        {
+                            "msg": "see transaction details below",
+                            "transaction_response": tx_submit,
+                        },
+                        status.HTTP_200_OK,
+                    )
         else:
             return Response(xdr_object.errors, status.HTTP_400_BAD_REQUEST)
 

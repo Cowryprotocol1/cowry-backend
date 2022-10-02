@@ -150,43 +150,47 @@ def isTransaction_Valid(
                             #notify admin
                             pass
                         else:
-                            merchants_list = TokenTableSerializer(
-                                all_merchant_token_bal(), many=True
-                            )
-                            selected_ma = merchants_to_process_transaction(
-                                merchants_list.data,
-                                tx_amount=amt,
-                                bank=None,
-                                transaction_type="user_withdrawals",
-                            )
-                            if selected_ma:
-                                # add transaction hash to db and update the merchant txhash table
-                                update_hash = add_and_update_transaction_hash(
-                                    transaction_hash, selected_ma["merchant"]["UID"]
+                            print(tx_obj.transaction_amount)
+                            if amt >= float(tx_obj.transaction_amount):
+                                merchants_list = TokenTableSerializer(
+                                    all_merchant_token_bal(), many=True
                                 )
-                                print(update_hash)
-                                if update_hash == True:
-                                    update_cleared_uncleared_bal(
-                                        merchant=selected_ma["merchant"]["UID"],
-                                        status="uncleared",
-                                        amount=amt,
+                                selected_ma = merchants_to_process_transaction(
+                                    merchants_list.data,
+                                    tx_amount=amt,
+                                    bank=None,
+                                    transaction_type="user_withdrawals",
+                                )
+                                if selected_ma:
+                                    # add transaction hash to db and update the merchant txhash table
+                                    update_hash = add_and_update_transaction_hash(
+                                        transaction_hash, selected_ma["merchant"]["UID"]
                                     )
-                                    assign_transaction_to_merchant(
-                                        transaction=tx_obj,
-                                        merchant=selected_ma["merchant"]["UID"],
-                                    )
-                                    Notifications(
-                                        selected_ma["merchant"]["email"],
-                                        "Pending Transaction",
-                                        "You have a pending transaction",
-                                    )
-                                else:
-                                    pass
+                                    print(update_hash)
+                                    if update_hash == True:
+                                        update_cleared_uncleared_bal(
+                                            merchant=selected_ma["merchant"]["UID"],
+                                            status="uncleared",
+                                            amount=amt,
+                                        )
+                                        assign_transaction_to_merchant(
+                                            transaction=tx_obj,
+                                            merchant=selected_ma["merchant"]["UID"],
+                                        )
+                                        Notifications(
+                                            selected_ma["merchant"]["email"],
+                                            "Pending Transaction",
+                                            "You have a pending transaction",
+                                        )
+                                    else:
+                                        pass
 
-                            elif not selected_ma:
-                                print(selected_ma)
-                                # notify admin
-                                pass
+                                elif not selected_ma:
+                                    print(selected_ma)
+                                    # notify admin
+                                    pass
+                            else:
+                                print("user sent an invalid amount")
 
                     else:
                         logging.info(

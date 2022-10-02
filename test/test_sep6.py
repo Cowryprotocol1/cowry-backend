@@ -2,7 +2,7 @@ import json
 from unittest.mock import patch
 
 import toml
-from .test_setup import TestSetUpClass, stablecoin_issuer, domain
+from test_setup import TestSetUpClass, stablecoin_issuer, domain
 from django.urls import reverse
 from stellar_sdk.keypair import Keypair
 
