@@ -93,7 +93,8 @@ def all_merchant_token_bal() -> list:
 def get_all_merchant_object() -> list:
     merchants = MerchantsTable.objects.all()
     return merchants
-def assign_transaction_to_merchant(transaction:object, merchant:str):
+def assign_transaction_to_merchant(transaction:object, merchant:str, amount:float):
+    """Assign a withdrawal transaction to a merchant to process withdrawals"""
     merchant_obj = MerchantsTable.objects.get(UID=merchant)
     tx_add = transaction.merchant.add(merchant_obj)
     return tx_add
@@ -170,11 +171,14 @@ def check_xdr_if_already_exist(xdr:str) -> bool:
         return True
     else:
         return False
-def remove_transaction_from_merchants_model(merchant:str, transaction_id:str):
+def remove_transaction_from_merchants_model(merchant:str, transaction_id:str, amount:float):
+    """used to remove an assigned transaction from the IFP account and also update the IFP uncleared balance"""
     try:
         merchant_obj = MerchantsTable.objects.get(UID=merchant)
         transaction_obj = TransactionsTable.objects.get(id=transaction_id)
         transaction_obj.merchant.remove(merchant_obj)
+        merchant_obj.unclear_bal -= amount
+        merchant_obj.save()
     except :
         #notify admin
         raise Exception("Transaction not found")
@@ -201,6 +205,8 @@ def delete_merchant(merchant: str) -> bool:
     merchant_obj = MerchantsTable.objects.get(UID=merchant)
     merchant_obj.delete()
     return True
+
+
 
 # merchants = MerchantsTable.objects.get(UID="8f9ee6190c5bb9ccb2f3")
 # print(merchants)

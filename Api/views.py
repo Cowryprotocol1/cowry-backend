@@ -24,8 +24,6 @@ from django.http import JsonResponse, HttpResponse
 from modelApp.models import MerchantsTable, TokenTable, TransactionsTable, TxHashTable
 from modelApp.utils import (
     all_merchant_token_bal,
-    assign_transaction_to_merchant,
-    check_xdr_if_already_exist,
     delete_merchant,
     get_merchant_by_pubKey,
     is_transaction_memo_valid,
@@ -66,8 +64,17 @@ from .utils import (
     merchants_to_process_transaction,
 )
 from rest_framework.renderers import TemplateHTMLRenderer
+from modelApp.models import PeriodicTaskRun
+from django.utils import timezone
+from django.db.models import Sum
 
-# from .renderers import TomlRenderer
+# new_time = timezone.now()
+# PeriodicTaskRun.objects.update(created_at=new_time)
+
+
+# adc = TokenTable.objects.aggregate(Sum(("allowedTokenAmount")))
+# print(adc)
+
 STAKING_TOKEN = config("STAKING_TOKEN_CODE")
 STAKING_ADDRESS = config("STAKING_ADDRESS")
 GENERAL_TRANSACTION_FEE = config("GENERAL_TRANSACTION_FEE")
@@ -268,8 +275,11 @@ class ON_RAMP_FIAT_USERS(APIView):
                                 status=status.HTTP_400_BAD_REQUEST,
                             )
                     else:
+                        # IFPs should be able to cancel a pending transaction after a certain amount of time
+                        # IFP should be able to specify the amount they receive with a particular transaction narration
+                        transactionFeeAmt =  float(amount) + float(GENERAL_TRANSACTION_FEE)
                         update_cleared_uncleared_bal(
-                            MA_selected["merchant"]["UID"], "uncleared", amount
+                            MA_selected["merchant"]["UID"], "uncleared", transactionFeeAmt
                         )
 
                         data = {
@@ -277,8 +287,7 @@ class ON_RAMP_FIAT_USERS(APIView):
                             "memo": MA_selected["merchant"]["UID"],
                             "amount": amount,
                             "fee": GENERAL_TRANSACTION_FEE,
-                            "amount_to_pay": float(amount)
-                            + float(GENERAL_TRANSACTION_FEE),
+                            "amount_to_pay":transactionFeeAmt,
                             "narration": transaction_narration,
                             "Bank Name": MA_selected["merchant"]["bankName"],
                             "account_number": MA_selected["merchant"]["bankAccount"],
@@ -453,8 +462,6 @@ class OFF_RAMP_FIAT(APIView):
                             status=status.HTTP_400_BAD_REQUEST,
                         )
                 else:
-                    # update_cleared_uncleared_bal(
-                    #     selected_ma["merchant"]["UID"], "uncleared", _data["amount"])
                     _resp_data = {}
                     _resp_data[
                         "message"
@@ -650,8 +657,22 @@ class MerchantDepositConfirmation(APIView):
     def post(self, request):
         # to do
         print(
-            "Merchant should be able to specify the amount they recieved in their bank acct, rather than we processing based on the expected amount"
+            "Merchant should be able to specify the amount they received in their bank acct, rather than we processing based on the expected amount"
         )
+        # during a deposit confirmation, 
+        # the total supply of stablecoin increase onchain 
+        # and the total supply of allowed token increase ON THE STABLECOIN ACCT(THIS is what is used to swap NGNALLOW -> NGN) 
+        # and the allowed token will be decrease on the IFP acct(to the tune of their license token)
+        # Allowed token plus uncleared_bal should always equal to the amount of license token
+        
+        #uncleared column is used for updating total pending transaction
+            # when a user query for deposit and is assigned an IFP(this will increase the IFP uncleared_Bal)
+            # when IFP have Processed transaction, this will reduced the IFP uncleared_bal
+            # ---------------
+            # when a user query for withdrawals(nothing happens as this does not immediately assign an iFp to that user)
+            # once protocol picks up transaction for a user's withdrawal and an IFP is assigned, The IFP unclear_bal increase
+            # once the IFP process the transaction and notify the user, the IFP uncleared_bal decrease
+            # allowed token increases
         """
         Merchants send transaction Id of a transaction that has been processed by the merchant
         endpoint for merchants to submit signed transaction to the blockchain
@@ -678,6 +699,8 @@ class MerchantDepositConfirmation(APIView):
                         and transaction.transaction_type == "deposit"
                         and merchant_pubKey == merchant_table.blockchainAddress
                     ):
+                        # in a deposit transaction, this only rectify the unclear_bal, allowToken will be untouch
+                        # Allowed token will be updated onchain through the transaction
                         depositor_address = transaction.users_address
                         amount_deposit = transaction.transaction_amount
                         # memo = transaction.transaction_narration
@@ -708,7 +731,8 @@ class MerchantDepositConfirmation(APIView):
 
                             try:
                                 remove_transaction_from_merchants_model(
-                                    merchants_Id, deposit_withdrawal_Id
+                                    merchants_Id, deposit_withdrawal_Id,
+                                    amount=amount_deposit
                                 )
                             except Exception as e:
                                 # notify admin
@@ -737,6 +761,8 @@ class MerchantDepositConfirmation(APIView):
                         and merchant_pubKey == merchant_table.blockchainAddress
                     ):
                         print("withdrawal Transaction")
+                        print("we need to specify the amount the IFP got in their back acct with that memo")
+                        # once transaction has been processed, the uncleared_bal should decrease with the amount processed - fee
                         try:
                             withdrawal_xdr = User_withdrawal_from_protocol(
                                 merchant_pubKey,
@@ -772,7 +798,7 @@ class MerchantDepositConfirmation(APIView):
 
                             try:
                                 remove_transaction_from_merchants_model(
-                                    merchants_Id, deposit_withdrawal_Id
+                                    merchants_Id, deposit_withdrawal_Id, amount=transaction.transaction_amount,
                                 )
                             except Exception as e:
                                 # notify admin
@@ -782,7 +808,7 @@ class MerchantDepositConfirmation(APIView):
                                     status=status.HTTP_400_BAD_REQUEST,
                                 )
                             else:
-                                # need to update transaction table hash for future refrences
+                                # need to update transaction table hash for future references
                                 return Response(
                                     {
                                         "message": "ok",
@@ -824,6 +850,7 @@ class MerchantDepositConfirmation(APIView):
         # send to blockchain
 
         pass
+
 
 
 class AllTokenTotalSupply(APIView):
@@ -892,6 +919,7 @@ class AccountDetails(APIView):
                     data["Amount_staked"] = merchant_bal.stakedTokenAmount
                     data["value_in_stablecoin"] = merchant_bal.licenseTokenAmount
                     data["exchange_rate"] = merchant_bal.stakedTokenExchangeRate
+                    data["pending_transaction"] = merchant_bal.unclear_bal
                     data["total_fiat_held_in_bank_acct"] = round(
                         float(merchant_bal.licenseTokenAmount)
                         - float(merchant_bal.allowedTokenAmount),

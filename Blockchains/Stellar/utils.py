@@ -49,13 +49,18 @@ def protocolAssetTotalSupply(assets:dict = {ALLOWED_AND_LICENSE_P_ADDRESS: ALLOW
     #         ALLOWED_AND_LICENSE_P_ADDRESS: ALLOWED_TOKEN_CODE,
     #         STABLECOIN_ISSUER: STABLECOIN_CODE,
     #     }
-
+    #include the total amount of stablecoin
+    #include the total amount of allowed token
+    #include total amount of protocol allowed token (Total supply of allowed token - stablecoin supply)
+    
     _asset_supply = {}
     for i in range(len(assets)):
         _keys = list(assets.keys())[i]
         _values = list(assets.values())[i]
         try:
             bala = horizon_server.assets().for_code(_values).for_issuer(_keys).call()
+            print("----------------")
+            print(bala)
             for i in bala["_embedded"]["records"]:
                 _asset_supply[_values] = {
                     "total_accounts": i["accounts"],

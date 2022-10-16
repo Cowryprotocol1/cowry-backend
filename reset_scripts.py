@@ -188,6 +188,7 @@ class DAO_SETUP():
 
 
 
-# print("starting dao setup")
-# dao_step_1 = DAO_SETUP()
+print("starting dao setup")
+dao_step_1 = DAO_SETUP()
+print(dao_step_1)
 # print(dao_step_1.add_protocol_to_address())

@@ -20,8 +20,9 @@ class Deployment():
     6. Setup signature and their weight
     7. 
     """
-
-    def __init__(self, _horizon_network, _genesis_signer="SAZ2I2EAO44MNY7OUBV2ONR22OSNWU2LW4AFVYLKFB2A7RZR7B5AJZHI",) -> None:
+# SC25HPC4M2DA6SVZNCYDKZA5PQEXDVIYPI7ETPEWLM3KUHOVKBELWSSV
+# GAMMNDTABDTWRRGI2JPYHYPBPQUSN6FYPSW4QGIWMP73ARTORV2YDJUB
+    def __init__(self, _horizon_network, _genesis_signer="SC25HPC4M2DA6SVZNCYDKZA5PQEXDVIYPI7ETPEWLM3KUHOVKBELWSSV",) -> None:
         self.Keys_to_create = {}
         self.NETWORK = _horizon_network
         self.Genesis_acct = _genesis_signer
@@ -294,9 +295,9 @@ class Deployment():
         source_acct = self.server.load_account(keypair_sender.public_key)
 
         buying_asset = Asset(code=buying_asset_code,
-                             issuer=buying_asset_issuer)
+                                issuer=buying_asset_issuer)
         selling_asset = Asset(code=selling_asset_code,
-                              issuer=selling_asset_issuer)
+                                issuer=selling_asset_issuer)
         str_amount = str(round(float(amount), 7))
         unit_price = str(round(float(starting_price_per_unit), 7))
 

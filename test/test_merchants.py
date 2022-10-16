@@ -132,7 +132,7 @@ class MerchantsTest(TestSetUpClass):
         )
         transaction_p.save()
         assign_transaction_to_merchant(
-            transaction=transaction_p, merchant=self.created_user.UID)
+            transaction=transaction_p, merchant=self.created_user.UID, amount=self.user_withdrawal["amount"])
 
 
         self._ma_data = {"merchant_public_key": transaction_p.users_address}

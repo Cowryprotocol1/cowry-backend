@@ -325,7 +325,11 @@ def User_withdrawal_from_protocol(merchant_pub_key: str, amount: str, memo: str,
 
     merchant_fee = float(GENERAL_TRANSACTION_FEE) - float(protocol_fee)
     # transaction show be send to protocol account 4 withdrawal and to deposit
-
+    #user db needs to be update once transaction done, update the allowed token
+    #Stablecoin address already has the allowed token used for swapping during deposit
+    # possible solution
+    # 1.during audit, the allowed token on the stablecoin account should be consider and removed from the supply
+    # 2.include all this details when the total balance endpoint is called to give user idea of what 
     burn_auth_payment = TransactionBuilder(
         source_account=src_acct,
         base_fee=base_fee,

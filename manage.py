@@ -22,8 +22,11 @@ def main():
 
 
 if __name__ == '__main__':
+    logging.warning("Update IFP balance during withdrawals")
+    logging.warning("when you clear out db, dont forget to, create a default value for periodicTask")
     logging.critical("Handle fee for withdrawal from the protocol")
     logging.critical("You need to start redis-server")
+    logging.critical("add returning multiple IFP for deposit more then an amount an IFP can process")
     logging.critical("connect celery with command'celery -A stablecoin worker -l INFO'")
     
     
