@@ -2,8 +2,13 @@
 from typing import TypeVar, Union
 from utils.utils import Id_generator, uidGenerator
 from .models import MerchantsTable, TokenTable, TransactionsTable, TxHashTable,XdrGeneratedTransaction
-# from rest_framework. import ObjectDoesNotExist
+from decouple import config
+
+
 QuerySet = TypeVar('QuerySet')
+GENERAL_TRANSACTION_FEE = config("GENERAL_TRANSACTION_FEE")
+
+
 # Get user by UID from the db and returns true if UID exists
 def is_transaction_memo_valid(memo):
     ma_memo = MerchantsTable.objects.filter(UID=memo)
@@ -93,10 +98,13 @@ def all_merchant_token_bal() -> list:
 def get_all_merchant_object() -> list:
     merchants = MerchantsTable.objects.all()
     return merchants
-def assign_transaction_to_merchant(transaction:object, merchant:str, amount:float):
-    """Assign a withdrawal transaction to a merchant to process withdrawals"""
+def assign_transaction_to_merchant(transaction:object, merchant:str, amount:str):
+    """Assign a withdrawal transaction to a merchant to process withdrawals, this is also used to update the uncleared_bal"""
     merchant_obj = MerchantsTable.objects.get(UID=merchant)
     tx_add = transaction.merchant.add(merchant_obj)
+    merchant_token_obj = TokenTable.objects.get(merchant=merchant)
+    merchant_token_obj.unclear_bal += amount
+    merchant_token_obj.save()
     return tx_add
 
 def get_transaction_By_Id(transaction_id:str) -> object:
@@ -177,9 +185,11 @@ def remove_transaction_from_merchants_model(merchant:str, transaction_id:str, am
         merchant_obj = MerchantsTable.objects.get(UID=merchant)
         transaction_obj = TransactionsTable.objects.get(id=transaction_id)
         transaction_obj.merchant.remove(merchant_obj)
-        merchant_obj.unclear_bal -= amount
-        merchant_obj.save()
-    except :
+        merchant_token_obj = TokenTable.objects.get(merchant=merchant)
+        merchant_token_obj.unclear_bal -= amount
+        merchant_token_obj.save()
+    except Exception as error:
+        print(error)
         #notify admin
         raise Exception("Transaction not found")
     # transaction_obj.delete() # delete the transaction from the db
@@ -193,7 +203,7 @@ def update_cleared_uncleared_bal(merchant: object, status: str, amount: float):
     merchant_obj = TokenTable.objects.get(merchant=merchant)
     if status == "cleared":
         merchant_obj.unclear_bal -= amount
-        merchant_obj.allowedTokenAmount += amount
+        merchant_obj.allowedTokenAmount += float(amount) - float(GENERAL_TRANSACTION_FEE)
         merchant_obj.save()
 
     elif status == "uncleared":

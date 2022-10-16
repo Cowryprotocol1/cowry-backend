@@ -145,6 +145,7 @@ class IndexPage(APIView):
 class OnBoardMA(APIView):
     """
     Endpoint to onboard a merchant
+    IFP/Merchant are giving 90% minting right, this is calculated when they staked using the amount_to_naira function
     """
 
     def post(self, request):
@@ -598,7 +599,7 @@ class OFF_BOARDING_MA(APIView):
                     elif token_balance.licenseTokenAmount == 0:
                         return Response(
                             data={
-                                "error": f"Merchant with public key {merchant_PubKey} is not fully register yet and so can offBoard itself, please stake to the protocol address and try again"
+                                "error": f"Merchant with public key {merchant_PubKey} is not fully register yet and so can't offBoard itself, please stake to the protocol address and try again"
                             },
                             status=status.HTTP_400_BAD_REQUEST,
                         )
@@ -640,7 +641,7 @@ class MerchantDepositConfirmation(APIView):
             )
             if pending_transactions:
                 return Response(
-                    TransactionSerializer(pending_transactions, many=True).data,
+                    {"pending_transactions":TransactionSerializer(pending_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User"},
                     status=status.HTTP_200_OK,
                 )
             else:
@@ -673,6 +674,7 @@ class MerchantDepositConfirmation(APIView):
             # once protocol picks up transaction for a user's withdrawal and an IFP is assigned, The IFP unclear_bal increase
             # once the IFP process the transaction and notify the user, the IFP uncleared_bal decrease
             # allowed token increases
+        # during a withdrawal transaction, IFP uncleared_bal will reduce and their allowed token balance will increase ny the amount of transaction
         """
         Merchants send transaction Id of a transaction that has been processed by the merchant
         endpoint for merchants to submit signed transaction to the blockchain
@@ -736,7 +738,7 @@ class MerchantDepositConfirmation(APIView):
                                 )
                             except Exception as e:
                                 # notify admin
-                                # print(e)
+                                print(e)
                                 return Response(
                                     {"error": "Something went wrong"},
                                     status=status.HTTP_400_BAD_REQUEST,
@@ -795,10 +797,12 @@ class MerchantDepositConfirmation(APIView):
                                 merchant=merchants_Id,
                                 transaction_Id=deposit_withdrawal_Id,
                             )
-
+                            # ifp should see amount to send to user -fee
+                            # and their allowed token should be -fee
                             try:
+                                update_cleared_uncleared_bal(merchants_Id, "cleared", transaction.transaction_amount)
                                 remove_transaction_from_merchants_model(
-                                    merchants_Id, deposit_withdrawal_Id, amount=transaction.transaction_amount,
+                                    merchants_Id, deposit_withdrawal_Id, amount=0,
                                 )
                             except Exception as e:
                                 # notify admin
@@ -922,7 +926,7 @@ class AccountDetails(APIView):
                     data["pending_transaction"] = merchant_bal.unclear_bal
                     data["total_fiat_held_in_bank_acct"] = round(
                         float(merchant_bal.licenseTokenAmount)
-                        - float(merchant_bal.allowedTokenAmount),
+                        - (float(merchant_bal.allowedTokenAmount) + float(merchant_bal.unclear_bal)),
                         7,
                     )
                     data[

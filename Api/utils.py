@@ -152,6 +152,7 @@ def isTransaction_Valid(
                         else:
                             tx_obj.transaction_amount = amt
                             tx_obj.save()
+                            
                             # if amt >= float(tx_obj.transaction_amount):
                             merchants_list = TokenTableSerializer(
                                 all_merchant_token_bal(), many=True
@@ -168,14 +169,17 @@ def isTransaction_Valid(
                                     transaction_hash, selected_ma["merchant"]["UID"]
                                 )
                                 if update_hash == True:
-                                    update_cleared_uncleared_bal(
-                                        merchant=selected_ma["merchant"]["UID"],
-                                        status="uncleared",
-                                        amount=amt,
-                                    )
+                                    # because this is a withdrawal transaction, we just update the user uncleared_bal
+                                    # update_cleared_uncleared_bal(
+                                    #     merchant=selected_ma["merchant"]["UID"],
+                                    #     status="uncleared",
+                                    #     amount=amt,
+                                    # )
+                                    #this also update the IFP uncleared bal
                                     assign_transaction_to_merchant(
                                         transaction=tx_obj,
                                         merchant=selected_ma["merchant"]["UID"],
+                                        amount=amt
                                         
                                     )
                                     Notifications(
@@ -187,6 +191,7 @@ def isTransaction_Valid(
                                     pass
 
                             elif not selected_ma:
+                                print(selected_ma)
                                 # notify admin
                                 pass
                             # else:
