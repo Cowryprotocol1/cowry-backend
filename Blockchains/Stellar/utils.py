@@ -34,7 +34,7 @@ def check_address_balance(address:str, asset_issuer:str, asset_code:str, check_a
         return False
     else:
         for bal in bal['balances']:
-            if bal["asset_type"] != "native" and bal['asset_code'] == asset_code and bal['asset_issuer'] == asset_issuer:
+            if bal["asset_type"] != "native" or bal["asset_type"] != "liquidity_pool_shares" and bal['asset_code'] == asset_code and bal['asset_issuer'] == asset_issuer:
                 if float(bal['balance']) >= float(check_amt):
                     # print(bal["balance"])
                     return True

@@ -90,9 +90,9 @@ def is_Asset_trusted(address: str, asset_number=2, issuerAddress=ALLOWED_AND_LIC
             if i["asset_type"] == "native":
                 xlm_balance.append(i["balance"])
 
-            if i["asset_type"] != "native" and i["asset_issuer"] == issuerAddress:
+            if i["asset_type"] != "native" and i["asset_type"] != "liquidity_pool_shares" and i["asset_issuer"] == issuerAddress:
                 trustAssetList.append(i["asset_code"])
-            elif i["asset_type"] != 'native' and i["asset_issuer"] == stableCoin:
+            elif i["asset_type"] != 'native' and i["asset_type"] != "liquidity_pool_shares" and i["asset_issuer"] == stableCoin:
                 trustAssetList.append(i)
 
         if len(trustAssetList) >= int(asset_number):
@@ -100,7 +100,7 @@ def is_Asset_trusted(address: str, asset_number=2, issuerAddress=ALLOWED_AND_LIC
         else:
             return [False, 0.0]
     except Exception as e:
-        # print(e)
+        print(e)
         return [False, 0.0]
 
 
@@ -255,7 +255,7 @@ source=keypair_sender.public_key
 
 def OffBoard_Merchant_with_Burn(recipient_pub_key: str, amount: str, memo: str, exchange_rate: str, total_staked_amt:str, allowed_license_token_signer=ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER) -> XDR:
     """
-    this burn allowed and license token from a merchant account and also unstake the merchant staked token
+    this burn allowed and license token from a merchant account and also un-stake the merchant staked token
     """
     base_fee = get_horizon_server().fetch_base_fee()
     # sender_keypair = Keypair.from_secret(sender_key)
@@ -347,3 +347,99 @@ def User_withdrawal_from_protocol(merchant_pub_key: str, amount: str, memo: str,
     submit_transaction = get_horizon_server().submit_transaction(burn_auth_payment)
 
     return submit_transaction
+
+
+
+
+# liquidity pool for protocol assets NGN - USDC or NGN - XLM
+from decimal import Decimal
+from typing import List, Any, Dict
+from stellar_sdk.liquidity_pool_asset import LiquidityPoolAsset
+# Returns the given asset pair in "protocol order."
+def order_asset(a: Asset, b: Asset) -> List[Asset]:
+    return [a, b] if LiquidityPoolAsset.is_valid_lexicographic_order(a, b) else [b, a]
+
+
+# for trustline of liquidity pool assets, users are expected to already have trustlines for the protocols assets
+# we check from the api before forwarding the transactions to the server
+def add_trustline(asset:Asset, signer: str) -> Dict[str, Any]:
+        """
+        Function to add trustline to an account
+        params - asset can be any stellar based asset type like liquiditypool asset, creditalphnum4 or 12
+        """
+        # stablecoin address adds trustline to ALLOWED NGN
+        # protocol address adds trustline to NGN
+        userKeyPair = Keypair.from_secret(signer)
+        fee = get_horizon_server().fetch_base_fee()
+        src_account = get_horizon_server().load_account(userKeyPair.public_key)
+        trustlineOp = TransactionBuilder(
+            source_account=src_account,
+            network_passphrase=get_network_passPhrase(),
+            base_fee=fee).append_change_trust_op(asset=asset).set_timeout(30).build()
+        trustlineOp.sign(signer)
+
+        submitted_trustlineOp = get_horizon_server().submit_transaction(trustlineOp)
+        return submitted_trustlineOp
+    
+def add_liquidity(
+        source: Keypair,
+        pool_id: str,
+        max_reserve_a: Decimal,
+        max_reserve_b: Decimal,
+) -> dict[str, Any]:
+
+
+    exact_price = max_reserve_a / max_reserve_b
+    min_price = exact_price - exact_price * Decimal("0.005") #
+    max_price = exact_price + exact_price * Decimal("0.005")
+    tx = (
+        TransactionBuilder(
+            source_account=source,
+            network_passphrase=get_network_passPhrase(),
+            base_fee=get_horizon_server().fetch_base_fee()).append_liquidity_pool_deposit_op(
+            liquidity_pool_id=pool_id,
+            max_amount_a=f"{max_reserve_a:.7f}",
+            max_amount_b=f"{max_reserve_b:.7f}",
+            min_price=min_price,
+            max_price=max_price,
+        )
+            .build()
+    )
+    tx.sign(source)
+    return get_horizon_server().submit_transaction(tx)
+
+
+
+def remove_liquidity(
+        source: Keypair, pool_id: str, shares_amount: Decimal
+) -> dict[str, Any]:
+    pool_info = get_horizon_server.liquidity_pools().liquidity_pool(pool_id).call()
+    total_shares = Decimal(pool_info["total_shares"])
+    min_reserve_a = (
+            shares_amount
+            / total_shares
+            * Decimal(pool_info["reserves"][0]["amount"])
+            * Decimal("0.95")
+    ) #
+    min_reserve_b = (
+            shares_amount
+            / total_shares
+            * Decimal(pool_info["reserves"][1]["amount"])
+            * Decimal("0.95")
+    )
+    tx = (
+       TransactionBuilder(
+            source_account=source,
+            network_passphrase=get_network_passPhrase(),
+            base_fee=get_horizon_server().fetch_base_fee())
+            .append_liquidity_pool_withdraw_op(
+            liquidity_pool_id=pool_id,
+            amount=f"{shares_amount:.7f}",
+            min_amount_a=f"{min_reserve_a:.7f}",
+            min_amount_b=f"{min_reserve_b:.7f}",
+        )
+            .build()
+    )
+    tx.sign(source)
+    return get_horizon_server().submit_transaction(tx)
+
