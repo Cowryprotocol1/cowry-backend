@@ -50,17 +50,10 @@ def add_and_update_transaction_hash(_hash:str, merchant_id:str) -> bool:
                 # merchant found but hash already processed
                 return False
             else:
-                # print("merchant Tx already processed")
-                # print("This is the value of merchant.is_processed", merchant.is_processed)
-                # print(merchan)
-                # merchant found but hash already processed
                 return False
 
         
-    # else:
-    #     # not found in the db
-    #     return False
-    
+
 
     
 
@@ -110,10 +103,6 @@ def assign_transaction_to_merchant(transaction:object, merchant:str, amount:str)
 def get_transaction_By_Id(transaction_id:str) -> object:
     transaction = TransactionsTable.objects.get(id=transaction_id)
     return transaction
-
-
-def get_list_of_all_register_merhants() -> list:
-    pass
 
 def merchant_transaction_status(merchant_id:str, status:str) -> str:
     merchant = MerchantsTable.objects.filter(UID=merchant_id)
