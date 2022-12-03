@@ -2,9 +2,12 @@ from typing import Dict, TypeVar
 from decouple import config
 from stellar_sdk.keypair import Keypair
 from stellar_sdk import Server, Asset, TransactionBuilder, Network, Signer, Claimant, ClaimPredicate, AuthorizationFlag, TrustLineFlags
+from stellar_sdk.transaction_builder import TransactionBuilder
+from stellar_sdk.exceptions import NotFoundError, BadRequestError, BadResponseError
+from stellar_sdk.transaction_envelope import TransactionEnvelope
 import logging
 logging.basicConfig(level=logging.INFO,  format="%(levelname)s %(message)s")
-
+# from .utils import calculateTxFee, minimum_transaction_fee
 XDR = TypeVar('XDR')
 
 STAKING_ADDRESS = config("STAKING_ADDRESS")
@@ -28,6 +31,8 @@ STABLECOIN_ISSUER = config("STABLECOIN_ISSUER")
 STABLECOIN_SIGNER_ADDRESS = config("STABLECOIN_ASSET_SIGNER")
 PROTOCOL_FEE_ACCOUNT = config("PROTOCOL_FEE_ACCOUNT")
 DELEGATED_SIGNER_ADDRESS = config("DELEGATED_SIGNER_ADDRESS")
+
+SWAP_SIGNER = config("SWAP_ACCOUNT_PRIVATE_KEY")
 
 
 def Mint_Token(recipient: str, amount: int, memo: str) -> bool:
@@ -442,4 +447,131 @@ def remove_liquidity(
     )
     tx.sign(source)
     return get_horizon_server().submit_transaction(tx)
+
+
+
+
+
+
+
+# this function has not been testing yet, the swapping of asset rely heavily on the frontend and walletconnet, will be continued once we have the frontend setup
+def calculateTxFee(amount:float) -> float:
+    """used to calculate transaction fee for swap"""
+    percentage = 0.1
+    fee = float(amount) * percentage/100
+    return round(fee, 4)
+
+def minimum_transaction_fee() -> float:
+    """minimum amount an account is willing to pay for fee, useful during a network surge"""
+    BASE_FEE = 50000 #this is in XLM
+    return BASE_FEE
+
+
+
+# swap will be between any two assets
+# Transaction fee from the swap will be paid in the sending Asset e.g NGN -> USDC fee in NGN
+# Transaction fee is send to the protocol fee account
+# return XDR to be sign and submitted by the client wallet
+
+# RISK
+# how will swap transaction be signed by the protocol? when using FeeBump
+    # Sol
+        # 1. Provide the feeBump transaction on a separate account that will be funded with XLM as need by the protocol.
+        # This address doesn't need to be a signer and doesn't need any signer on him too. XLM will be add to the account when account Balance is believe to be low.
+        # 1000 XLM will be able to process 10 Million transaction even when at a surge time for the network at 0.0001
+        
+def Swap_assets(
+    user_secret_key,
+    sending_currency,
+    send_issuer,
+    send_amount,
+    receive_currency,
+    receive_issuer,
+    dest_amt,
+    swap_path,
+    swap_path_fee,
+    memo,
+):
+    """Function used to swap between assets on stellar, This function also deduct transaction fee from the amount the User is swapping from"""
+    # need to include handling of fee, we need to get the fee amount and path from the backend and process payment
+
+    secret_keys = Keypair.from_secret(user_secret_key)
+    source_key_load = secret_keys.public_key
+    source_load = get_horizon_server().load_account(source_key_load)
+
+    transaction_fee = calculateTxFee(send_amount)
+
+    _sendingAsset = Asset(sending_currency, send_issuer)
+    _destAsset = Asset(receive_currency, receive_issuer)
+    _feeAsset = Asset.native()
+
+    newAmt = float(send_amount) - float(transaction_fee)
+
+    min_dest_amt = float(dest_amt) - float(dest_amt) * 0.05
+
+    swap_transaction = (
+        TransactionBuilder(
+            source_account=source_load,
+            network_passphrase=get_network_passPhrase,
+            base_fee=minimum_transaction_fee(),
+        )
+        .add_text_memo(memo)
+        .append_path_payment_strict_send_op(
+            secret_keys.public_key,
+            _sendingAsset,
+            str(round(newAmt, 7)),
+            _destAsset,
+            str(round(min_dest_amt, 7)),
+            swap_path,
+            secret_keys.public_key,
+        )
+        .append_path_payment_strict_send_op(
+            Keypair.from_secret(SWAP_SIGNER).public_key,
+            _sendingAsset,
+            str(round(float(transaction_fee), 7)),
+            _feeAsset,
+            str(0.0002),
+            swap_path_fee,
+        ).set_timeout(30)
+        .build()
+    )
+
+    swap_transaction.sign(user_secret_key)
+
+    signed_tx = swap_transaction.to_xdr()
+    
+    try:
+        fee_bump_swap = submit_feeBump_transaction(signed_tx)
+    except (BadRequestError, NotFoundError, BadResponseError) as errors:
+        print(errors)
+        raise Exception("error submitting swap Transaction on Horizon")
+    else:
+        # encrypt user private key back with their private key
+        return fee_bump_swap
+
+
+
+def submit_feeBump_transaction(transaction_xdr):
+    transaction_to_submit = TransactionEnvelope.from_xdr(
+        xdr=transaction_xdr, network_passphrase=get_network_passPhrase
+    )
+    """
+    sign transaction and submit to the blockchain using feebump transaction, the source for feebump is from sentit.
+    """
+
+    transaction_key = SWAP_SIGNER #this is to be an independent account controlled by the protocol
+    transaction_feeBump = TransactionBuilder.build_fee_bump_transaction(
+        fee_source=Keypair.from_secret(transaction_key),
+        base_fee=minimum_transaction_fee(),
+        inner_transaction_envelope=transaction_to_submit,
+        network_passphrase=get_network_passPhrase,
+    )
+    transaction_feeBump.sign(transaction_key)
+    print("________________________")
+    print(transaction_feeBump.hash().hex())
+    print("________________________")
+
+    sent_fee_block = get_horizon_server().submit_transaction(transaction_feeBump)
+    return sent_fee_block
+
 

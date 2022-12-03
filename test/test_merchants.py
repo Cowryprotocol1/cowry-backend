@@ -141,6 +141,9 @@ class MerchantsTest(TestSetUpClass):
         req_data = self.client.generic(method="GET", path=self.url+query_params, data=json.dumps(
             self._ma_data), content_type='application/json')
 
+        print(req_data.json())
+        print(req_data.json()['pending_transactions'])
+
         self.assertEqual(req_data.status_code, 200)
-        self.assertTrue(len(req_data.data) == 1)
+        self.assertTrue(len(req_data.json()["pending_transactions"]) == 1)
 

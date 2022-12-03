@@ -853,6 +853,12 @@ class MerchantDepositConfirmation(APIView):
         # wrap transaction in feebump - protocol acct
         # send to blockchain
 
+    def delete(self, request):
+        """Endpoint to cancel a pending transaction from a IFP list of pending transaction and release their uncleared bal"""
+        # merchant should be authenticated before calling this endpoint to cancel transactions
+        # once merchant query this endpoint with the right transactionID, if transaction still pending it should be cancel
+        # transaction can only be cancel only after 30min after it was initiated and only the MA that owns the transaction
+        # add sep10 authentication for all endpoint
         pass
 
 

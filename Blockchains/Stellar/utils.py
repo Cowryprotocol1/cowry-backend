@@ -1,7 +1,6 @@
 
 
 from http import server
-from stellar_sdk.exceptions import Ed25519PublicKeyInvalidError
 from stellar_sdk import Account
 from django.core.exceptions import ValidationError
 from stellar_sdk.server import Server
@@ -71,6 +70,16 @@ def protocolAssetTotalSupply(assets:dict = {ALLOWED_AND_LICENSE_P_ADDRESS: ALLOW
             # print(E)
             raise Exception("error getting details from this endpoint")
     return _asset_supply
+
+
+
+
+
+
+
+
+
+
 # print(check_address_balance(
 #     "GDUOMP2S62CUUCR2ZP3IRCATCCTII77G7ES52K4QAHYPX63GDZJ3QUIP", "GC54NAZBATJECJIXV6VQ7UV2NUR5N33NA7FY5NDKSKEZRD57KSUUGXV3", "NGN", 1000))
     

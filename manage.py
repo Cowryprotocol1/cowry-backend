@@ -22,7 +22,7 @@ def main():
 
 
 if __name__ == '__main__':
-    logging.warning("Update IFP balance during withdrawals")
+    logging.warning("add merchant signin and signout with wallet connect")
     logging.warning("when you clear out db, dont forget to, create a default value for periodicTask")
     logging.critical("Handle fee for withdrawal from the protocol")
     logging.critical("You need to start redis-server")
