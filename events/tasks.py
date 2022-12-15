@@ -10,8 +10,14 @@ from Api.utils import isTransaction_Valid
 
 # @shared_task(bind=True)
 def transaction_list(staking_address=env_config("STAKING_ADDRESS"), withdrawal_address=env_config("STABLECOIN_ISSUER")):
+    # try:
     test = PeriodicTaskRun.objects.latest("created_at")
-
+    # except PeriodicTaskRun.DoesNotExist:
+    #     print("this query has not been created yet")
+    #     print("this should be created")
+    #     #set the default value and try again when it the right time
+    #     PeriodicTaskRun.objects.create(task_id=1000, task_name="default_value")
+    # else:
     last_updated_time = test.created_at.strftime("%Y-%m-%d %H:%M:%S")
     print()
     print("===================================")
