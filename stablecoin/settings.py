@@ -26,7 +26,7 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = ['localhost', 'stablemvp.herokuapp.com', '127.0.0.1', 'testserver', '18.217.47.238']
+ALLOWED_HOSTS = ['localhost', 'stablemvp.herokuapp.com', '127.0.0.1', 'testserver', '.cowryprotocol.io']
 
 
 # Application definition
@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'modelApp',
     'Api',
     'events',
+    
 ]
 
 # REST_FRAMEWORK = {
