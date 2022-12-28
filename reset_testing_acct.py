@@ -27,6 +27,7 @@ class TestingAccountReset:
 
         self.server = Server("https://horizon-testnet.stellar.org")
         self._networkPassPhrase = Network.TESTNET_NETWORK_PASSPHRASE
+        
         self.Keys_to_create["account1"] = env_getter("account1")
         self.Keys_to_create["account2"] = env_getter("account2")
         self.Keys_to_create["account3"] = env_getter("account3")
