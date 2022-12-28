@@ -28,11 +28,14 @@ from modelApp.utils import (
     get_merchant_by_pubKey,
     is_transaction_memo_valid,
     remove_transaction_from_merchants_model,
-    return_all_objects_for_a_merchants,
+    update_transaction_status,
+    get_transaction_By_Id,
+    get_pending_transactions,
     update_cleared_uncleared_bal,
     update_pending_transaction_model,
     update_PendingTransaction_Model,
     update_xdr_table,
+    get_all_transaction_for_merchant
 )
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -256,6 +259,7 @@ class ON_RAMP_FIAT_USERS(APIView):
                             transaction_type="deposit",
                             narration=transaction_narration,
                             transaction_memo=MA_selected["merchant"]["UID"],
+                            transaction_status="pending",
                             phone_num=MA_selected["merchant"]["phoneNumber"],
                             user_bank_account=MA_selected["merchant"]["bankAccount"],
                             bank_name=MA_selected["merchant"]["bankName"],
@@ -341,7 +345,7 @@ class ON_RAMP_FIAT_USERS(APIView):
         if check_args.is_valid() and memo:
             try:
 
-                pending_merchant_tx = return_all_objects_for_a_merchants(memo)
+                pending_merchant_tx = get_pending_transactions(memo)
             except MerchantsTable.DoesNotExist:
                 return Response(
                     {"error": "invalid memo"}, status=status.HTTP_404_NOT_FOUND
@@ -379,7 +383,6 @@ class ON_RAMP_FIAT_USERS(APIView):
                             pass
 
                     else:
-                        # print(i)
                         pass
                 return Response(
                     "Transaction not found", status=status.HTTP_400_BAD_REQUEST
@@ -636,12 +639,16 @@ class MerchantDepositConfirmation(APIView):
                 return Response(
                     {"error": "Merchant not found"}, status=status.HTTP_404_NOT_FOUND
                 )
-            pending_transactions = return_all_objects_for_a_merchants(
+            all_transactions = get_all_transaction_for_merchant(
                 merchant_details.UID
             )
-            if pending_transactions:
+            if all_transactions:
+                _data = TransactionSerializer(all_transactions, many=True).data
+                # print(_data)
+                # _data.update({"transaction_fee":GENERAL_TRANSACTION_FEE})
+
                 return Response(
-                    {"pending_transactions":TransactionSerializer(pending_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User"},
+                    {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User"},
                     status=status.HTTP_200_OK,
                 )
             else:
@@ -687,7 +694,7 @@ class MerchantDepositConfirmation(APIView):
 
         if merchants_Id and deposit_withdrawal_Id and merchant_pubKey:
             try:
-                merchants_txs = return_all_objects_for_a_merchants(merchants_Id)
+                merchants_txs = get_pending_transactions(merchants_Id)
                 merchant_table = MerchantsTable.objects.get(UID=merchants_Id)
             except (MerchantsTable.DoesNotExist, TransactionsTable.DoesNotExist):
                 return Response(
@@ -732,10 +739,14 @@ class MerchantDepositConfirmation(APIView):
                             )
 
                             try:
-                                remove_transaction_from_merchants_model(
-                                    merchants_Id, deposit_withdrawal_Id,
-                                    amount=amount_deposit
-                                )
+                                update_cleared_uncleared_bal(merchants_Id, "deposit_cleared", transaction.transaction_amount)
+
+                                # update the state of the transaction
+                                update_transaction_status(transaction_id=deposit_withdrawal_Id, status='completed')
+                                # remove_transaction_from_merchants_model(
+                                #     merchants_Id, deposit_withdrawal_Id,
+                                #     amount=amount_deposit
+                                # )
                             except Exception as e:
                                 # notify admin
                                 print(e)
@@ -801,9 +812,10 @@ class MerchantDepositConfirmation(APIView):
                             # and their allowed token should be -fee
                             try:
                                 update_cleared_uncleared_bal(merchants_Id, "cleared", transaction.transaction_amount)
-                                remove_transaction_from_merchants_model(
-                                    merchants_Id, deposit_withdrawal_Id, amount=0,
-                                )
+                                # remove_transaction_from_merchants_model(
+                                #     merchants_Id, deposit_withdrawal_Id, amount=0,
+                                # )
+                                update_transaction_status(deposit_withdrawal_Id, status='completed')
                             except Exception as e:
                                 # notify admin
                                 # print(e)
@@ -830,7 +842,7 @@ class MerchantDepositConfirmation(APIView):
                         pass
                 return Response(
                     {
-                        "message": f"Transaction with id {deposit_withdrawal_Id} not found with this merchant or merchant and public key not related"
+                        "message": f"Transaction with id {deposit_withdrawal_Id} not found with this merchant or merchant and public key not related or transaction has already been completed"
                     },
                     status=status.HTTP_404_NOT_FOUND,
                 )
@@ -925,19 +937,22 @@ class AccountDetails(APIView):
                         {"msg": "Merchant not found"}, status=status.HTTP_404_NOT_FOUND
                     )
                 else:
+                    fiat_in_bank =  round(float(merchant_bal.licenseTokenAmount)
+                    - (float(merchant_bal.allowedTokenAmount) + float(merchant_bal.unclear_bal)),
+                        7,
+                    )
+
                     data = {}
                     data["Amount_staked"] = merchant_bal.stakedTokenAmount
                     data["value_in_stablecoin"] = merchant_bal.licenseTokenAmount
                     data["exchange_rate"] = merchant_bal.stakedTokenExchangeRate
                     data["pending_transaction"] = merchant_bal.unclear_bal
-                    data["total_fiat_held_in_bank_acct"] = round(
-                        float(merchant_bal.licenseTokenAmount)
-                        - (float(merchant_bal.allowedTokenAmount) + float(merchant_bal.unclear_bal)),
-                        7,
-                    )
-                    data[
-                        "msg"
-                    ] = "the total_fiat_held_in_bank_acct is not final, pending transaction are also added to the amount"
+                    data["total_fiat_held_in_bank_acct"] = fiat_in_bank
+                    data["allowed_token"] = float(merchant_bal.licenseTokenAmount) - (float(merchant_bal.unclear_bal) + float(fiat_in_bank))
+                    # should include amount of allowed token left
+                    # data[
+                    #     "msg"
+                    # ] = "the total_fiat_held_in_bank_acct is not final, pending transaction are also added to the amount"
 
                     return Response(data, status=status.HTTP_200_OK)
 
@@ -1064,6 +1079,7 @@ def Sep6Deposit(requests):
                             float(amount) + float(GENERAL_TRANSACTION_FEE)
                         ),
                         transaction_type="deposit",
+                        transaction_status="pending",
                         narration=transaction_narration,
                         transaction_memo=MA_selected["merchant"]["UID"],
                         phone_num=MA_selected["merchant"]["phoneNumber"],
@@ -1165,3 +1181,66 @@ def sep6Withdrawal(requests):
         return Response(data, status=status.HTTP_200_OK)
     else:
         return Response(serializer_Data.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(["GET"])
+def auditProtocol(requests):
+    
+    pass
+
+# class TransactionExpire(APIView):
+#     """
+#     Endpoint for merchant to cancel a transaction after a specified time and the transaction has not been processed
+#     """
+#     def get(self, requests):
+#         """
+#         get a transaction status
+#         endpoint used to check transaction status if pending, complete or fail
+#         """
+#         pass
+#     def post(self, requests):
+#         """
+#         endpoint for canceling a transaction after a specific period of time 
+#         endpoint takes only a valid transaction_id
+#         """
+#         transaction_id = requests.data.get("transaction_id")
+#         if transaction_id == None:
+#             return Response({"message":"transaction_id is a required params"}, status=status.HTTP_400_BAD_REQUEST)
+        
+#         else:
+#             transaction = get_transaction_By_Id(transaction_id=transaction_id)
+#             print(transaction.transaction_status)
+#             # _data = TransactionSerializer(transaction).data
+#             # the client is meant to monitor transaction for timeout, transaction with less than 1hrs should not be allow to be cancel
+#             if transaction.transaction_status == "completed":
+#                 _res_data = {"message":"this transaction has been completed"}
+#                 return Response(_res_data, status=status.HTTP_400_BAD_REQUEST)
+#             elif transaction.transaction_status == "pending":
+#                 # PROBLEM
+#                     # - Whats stopping anyone from calling the endpoint and just passing the transaction 
+#                     #       id as parameter and cancelling the transaction without the IFP consent
+#                 # SOL
+#                     # 1. Enable Sep-10 for the endpoint
+#                     # 2. create a transaction to be sign and send back to the protocol(almost sep-10 flow too)
+#                 # change transaction status from IFP account to cancelled,
+#                 # release IFP pending balance back to their account
+#                 # when transaction is cancelled, the amount for the transaction needs to be added back to the IFP allowedToken balance
+#                 # adc = update_transaction_status(transaction_id=transaction_id, status='cancel')
+#                 # update_cleared_uncleared_bal()
+#                 print(transaction.merchantstable_id)
+#                 _data ={"ok":"ok"}
+#                 return Response(_data, status=status.HTTP_200_OK)
+
+
+
+                
+
+
+
+
+        # print(transaction)
+        # print(_data)
+        # return Response()
+        # _data ={"ok":"ok"}
+        # return Response(_data, status=status.HTTP_200_OK)
