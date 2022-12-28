@@ -142,8 +142,8 @@ class MerchantsTest(TestSetUpClass):
             self._ma_data), content_type='application/json')
 
         print(req_data.json())
-        print(req_data.json()['pending_transactions'])
+        print(req_data.json()['all_transactions'])
 
         self.assertEqual(req_data.status_code, 200)
-        self.assertTrue(len(req_data.json()["pending_transactions"]) == 1)
+        self.assertTrue(len(req_data.json()["all_transactions"]) == 1)
 

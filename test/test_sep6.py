@@ -21,6 +21,7 @@ class TestSep6Endpoints(TestSetUpClass):
         mock_trust.return_value = [True, 10000]
         sep_url = reverse("sep6Deposit")
         req_data = self.client.get(sep_url, {"asset_code": "NGN", "account": Keypair.random().public_key, "amount": 1000}, content_type='application/json')
+        print(req_data.data)
         self.assertTrue(req_data.status_code == 200)
         self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
         self.assertTrue("eta" in req_data.data)
