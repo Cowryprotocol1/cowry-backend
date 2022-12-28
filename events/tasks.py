@@ -26,11 +26,12 @@ def transaction_list(staking_address=env_config("STAKING_ADDRESS"), withdrawal_a
     horizon_server = get_horizon_server()
     try:
         staking_transaction = horizon_server.transactions().for_account(staking_address).limit(200).call()
-        withdrawal_transaction = horizon_server.transactions().for_account(withdrawal_address).limit(200).call()
+        # withdrawal_transaction = horizon_server.transactions().for_account(withdrawal_address).limit(200).call()
     except Exception as err:
         #notify admin
         print(err)
     else:
+        
         #handles MA that just staked with the protocol to start processing transactions
         for transaction in staking_transaction["_embedded"]["records"]:
             try:
