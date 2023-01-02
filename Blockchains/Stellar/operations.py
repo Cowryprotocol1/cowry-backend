@@ -153,7 +153,7 @@ def send_and_authorize_allowed_and_license_token_existing_address(recipient: str
     allow_asset = Asset(code=ALLOWED_TOKEN_CODE,
                         issuer=ALLOWED_AND_LICENSE_P_ADDRESS)
     license_asset = Asset(code=LICENSE_TOKEN_CODE,
-                          issuer=LICENSE_TOKEN_ISSUER)
+                        issuer=LICENSE_TOKEN_ISSUER)
 
     burn_auth_payment = TransactionBuilder(
         source_account=src_acct,
