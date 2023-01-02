@@ -1,0 +1,50 @@
+# Sample stellar.toml
+
+
+NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
+#FEDERATION_SERVER="coming soon"
+TRANSFER_SERVER = "https://stablemvp.herokuapp.com/sep6"
+
+[DOCUMENTATION]
+ORG_NAME="Cowry Protocol"
+ORG_URL="https://stablemvp.herokuapp.com/"
+ORG_LOGO="coming soon"
+ORG_DESCRIPTION="Decentralized Fiat backed stablecoin"
+#ORG_PHYSICAL_ADDRESS="123 Sesame Street, New York, NY 12345, United States"
+#ORG_PHYSICAL_ADDRESS_ATTESTATION="https://www.domain.com/address_attestation.jpg"
+#ORG_PHONE_NUMBER="1 (123)-456-7890"
+#ORG_PHONE_NUMBER_ATTESTATION="https://www.domain.com/phone_attestation.jpg"
+
+
+#ORG_KEYBASE="accountname"
+#ORG_TWITTER="orgtweet"
+#ORG_GITHUB="orgcode"
+ORG_OFFICIAL_EMAIL="coming soon"
+
+[[CURRENCIES]]
+code = "NGN"
+issuer = "Coming soon"
+status = "live"
+display_decimals = 3
+name = "Naira Currency"
+desc = "NGN will always equal 1 NGN and is backed by fiat held in an account"
+conditions = "Redeemable to any Nigeria Bank, Withdrawal fees may apply"
+image = "coming soon"
+is_unlimited = true
+is_asset_anchored = true
+anchor_asset_type = "fiat"
+anchor_asset = "NGN"
+info_server = "https://stablemvp.herokuapp.com/sep6/info"
+
+###################################
+# Required compliance fields:
+#      name=<recipient name>
+#      addr=<recipient address>
+# Federation Format:
+#        <phone number>*anchor.com
+#        Forwarding supported by sending to: forward*anchor.com
+#           forward_type=bank_account
+#           swift=<swift code of receiving bank>
+#           acct=<recipient account number at receiving bank>
+# Minimum Amount Forward: $2 USD
+# Maximum Amount Forward: $10000 USD
