@@ -908,11 +908,11 @@ class AccountDetails(APIView):
         Endpoint returns details of a given address, initial it would support only merchant and then all protocol users
         """
         try:
-            pub_key = check_stellar_address(request.data.get("account_id"))
+            pub_key = check_stellar_address(request.query_params.get("account_id"))
         except Exception as _a:
-            # print(_a)
+            print(_a)
             return Response(
-                {"msg": "Not a valid Stellar address"},
+                {"msg": "Not a valid Stellar address", "status":"fail"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         else:
@@ -925,7 +925,7 @@ class AccountDetails(APIView):
 
             except MerchantsTable.DoesNotExist:
                 return Response(
-                    {"msg": f"merchant with account id {pub_key} does not exist"},
+                    {"msg": f"merchant with account id {pub_key} does not exist", "status":"fail"},
                     status=status.HTTP_404_NOT_FOUND,
                 )
             else:
@@ -934,7 +934,7 @@ class AccountDetails(APIView):
                     merchant_bal = TokenTable.objects.get(merchant=merchant)
                 except TokenTable.DoesNotExist:
                     return Response(
-                        {"msg": "Merchant not found"}, status=status.HTTP_404_NOT_FOUND
+                        {"msg": "Merchant not found", "status":"fail"}, status=status.HTTP_404_NOT_FOUND
                     )
                 else:
                     fiat_in_bank =  round(float(merchant_bal.licenseTokenAmount)
@@ -949,6 +949,7 @@ class AccountDetails(APIView):
                     data["pending_transaction"] = merchant_bal.unclear_bal
                     data["total_fiat_held_in_bank_acct"] = fiat_in_bank
                     data["allowed_token"] = float(merchant_bal.licenseTokenAmount) - (float(merchant_bal.unclear_bal) + float(fiat_in_bank))
+                    data["status"] = "successful"
                     # should include amount of allowed token left
                     # data[
                     #     "msg"
