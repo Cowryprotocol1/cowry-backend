@@ -137,6 +137,15 @@ def get_all_transaction_for_merchant(merchant:object) -> QuerySet:
     transaction_list = TransactionsTable.objects.filter(merchant=merchant_obj)
     return transaction_list
 
+def get_transaction_by_pubKey(pubKey: str) -> QuerySet:
+    """
+    Used to get transaction by public key
+    """
+    transaction_ = TransactionsTable.objects.filter(users_address=pubKey)
+    return transaction_
+
+
+
 
 def update_pending_transaction_model(
     merchant: str,
