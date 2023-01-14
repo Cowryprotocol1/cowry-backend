@@ -35,7 +35,8 @@ from modelApp.utils import (
     update_pending_transaction_model,
     update_PendingTransaction_Model,
     update_xdr_table,
-    get_all_transaction_for_merchant
+    get_all_transaction_for_merchant,
+    get_transaction_by_pubKey
 )
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -629,38 +630,51 @@ class MerchantDepositConfirmation(APIView):
         Merchants use this endpoint to get list of all their pending transaction both for withdrawals and deposits
         this takes the merchant public key as arguments and return a list of pending transactions belonging  to the merchants
         """
-        merchant_public_key = self.request.query_params.get("merchant_public_key")
-        if merchant_public_key:
+        user_key = self.request.query_params.get("public_key")
+        query_type =  self.request.query_params.get("query_type")
+        if user_key and query_type == "ifp":
             try:
                 merchant_details = get_merchant_by_pubKey(
-                    merchant_pubKey=merchant_public_key
+                    merchant_pubKey=user_key
                 )
             except MerchantsTable.DoesNotExist:
                 return Response(
-                    {"error": "Merchant not found"}, status=status.HTTP_404_NOT_FOUND
-                )
-            all_transactions = get_all_transaction_for_merchant(
-                merchant_details.UID
-            )
-            if all_transactions:
-                _data = TransactionSerializer(all_transactions, many=True).data
-                # print(_data)
-                # _data.update({"transaction_fee":GENERAL_TRANSACTION_FEE})
-
-                return Response(
-                    {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User"},
-                    status=status.HTTP_200_OK,
+                    {"error": "address not a merchant yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
                 )
             else:
+                all_transactions = get_all_transaction_for_merchant(
+                merchant_details.UID
+                    )
+        elif user_key and query_type == "user":
+            try:
+                all_transactions =get_transaction_by_pubKey(user_key)
+                print(all_transactions)
+            except TransactionsTable.DoesNotExist:
                 return Response(
-                    data={"error": "No pending transactions found"},
-                    status=status.HTTP_404_NOT_FOUND,
+                    {"error": "address has no transaction yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
                 )
+                
         else:
             return Response(
-                data={"error": "Please provide merchant public key"},
+                data={"error": "Please provide a public key and query_type"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+            
+        if all_transactions:
+            return Response(
+                {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User", 'status':"success"},
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                data={"error": "No transactions found", "status":"fail"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        # else:
+            # return Response(
+            #     data={"error": "Please provide merchant public key"},
+            #     status=status.HTTP_400_BAD_REQUEST,
+            # )
 
     def post(self, request):
         # to do
