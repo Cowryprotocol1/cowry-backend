@@ -24,6 +24,7 @@ from django.http import JsonResponse, HttpResponse
 from modelApp.models import MerchantsTable, TokenTable, TransactionsTable, TxHashTable
 from modelApp.utils import (
     all_merchant_token_bal,
+    protocolAudit,
     delete_merchant,
     get_merchant_by_pubKey,
     is_transaction_memo_valid,
@@ -70,7 +71,6 @@ from .utils import (
 from rest_framework.renderers import TemplateHTMLRenderer
 from modelApp.models import PeriodicTaskRun
 from django.utils import timezone
-from django.db.models import Sum
 
 # new_time = timezone.now()
 # PeriodicTaskRun.objects.update(created_at=new_time)
@@ -1201,8 +1201,10 @@ def sep6Withdrawal(requests):
 
 @api_view(["GET"])
 def auditProtocol(requests):
-    
-    pass
+    protocol_audit = protocolAudit()
+    return Response({"data":protocol_audit, "protocol_token_totalSupply":protocolAssetTotalSupply()}, status=status.HTTP_200_OK)
+
+
 
 # class TransactionExpire(APIView):
 #     """

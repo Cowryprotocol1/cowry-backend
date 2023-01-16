@@ -62,7 +62,7 @@ def protocolAssetTotalSupply(assets:dict = {ALLOWED_AND_LICENSE_P_ADDRESS: ALLOW
             print(bala)
             for i in bala["_embedded"]["records"]:
                 _asset_supply[_values] = {
-                    "total_accounts": i["accounts"],
+                    # "total_accounts": i["accounts"],
                     "total_balance": i["balances"],
                 }
 
