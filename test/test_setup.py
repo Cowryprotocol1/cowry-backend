@@ -11,6 +11,8 @@ from modelApp.models import MerchantsTable, TokenTable
 from stellar_sdk.keypair import Keypair
 import requests
 from stellar_sdk import TransactionBuilder, Asset, Server, Network
+from modelApp.utils import uidGenerator
+
 
 
 
@@ -30,8 +32,11 @@ stablecoin = config('STABLECOIN_CODE')
 stablecoin_issuer = config("STABLECOIN_ISSUER")
 stablecoin_signer = config('PROTOCOL_SIGNER')
 
+
 ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER = config(
     "ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER")
+
+GENERAL_TRANSACTION_FEE = config('GENERAL_TRANSACTION_FEE')
 
 server = Server("https://horizon-testnet.stellar.org")
 _networkPassPhrase = Network.TESTNET_NETWORK_PASSPHRASE

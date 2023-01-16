@@ -1,8 +1,7 @@
 import json, time
 from unittest.mock import patch
-from test_setup import TestSetUpClass
+from test_setup import TestSetUpClass, uidGenerator
 from django.urls import reverse
-from modelApp.utils import uidGenerator
 
 
 class EventTest(TestSetUpClass):
