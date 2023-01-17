@@ -8,6 +8,8 @@ from .models import (
     XdrGeneratedTransaction,
 )
 from decouple import config
+from django.db.models import Sum, F
+
 
 
 QuerySet = TypeVar("QuerySet")
@@ -332,6 +334,25 @@ def delete_merchant(merchant: str) -> bool:
     merchant_obj = MerchantsTable.objects.get(UID=merchant)
     merchant_obj.delete()
     return True
+
+
+
+
+def protocolAudit():
+    all_merchants = TokenTable.objects.all()
+    _edited = all_merchants.values("merchant_id__blockchainAddress").annotate(
+
+        total_staked_usdc = F('stakedTokenAmount'),
+        exchange_rate = F('stakedTokenExchangeRate'),
+        total_mint_right = F('licenseTokenAmount'),
+        pending_unclear_amt = F('unclear_bal'),
+        fiat_in_acct = F('total_mint_right') - (F('allowedTokenAmount') + F('unclear_bal')),
+        allowed_token_left =  F("total_mint_right") - F('pending_unclear_amt') + F('fiat_in_acct'),
+    )
+
+    return _edited
+
+
 
 
 # merchants = MerchantsTable.objects.get(UID="8f9ee6190c5bb9ccb2f3")
