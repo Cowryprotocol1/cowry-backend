@@ -137,13 +137,20 @@ class MerchantsTest(TestSetUpClass):
 
         self._ma_data = {"merchant_public_key": transaction_p.users_address}
         self.url = reverse('merchants')
-        query_params = f"?merchant_public_key={transaction_p.users_address}"
+        query_params = f"?public_key={transaction_p.users_address}&query_type=ifp"
         req_data = self.client.generic(method="GET", path=self.url+query_params, data=json.dumps(
             self._ma_data), content_type='application/json')
 
-        print(req_data.json())
-        print(req_data.json()['all_transactions'])
+        query_params_user = f"?public_key={transaction_p.users_address}&query_type=user"
+        req_data_user = self.client.generic(method="GET", path=self.url+query_params_user, data=json.dumps(
+            self._ma_data), content_type='application/json')
+
+        # print(req_data.json()['all_transactions'])
 
         self.assertEqual(req_data.status_code, 200)
+        self.assertEqual(req_data_user.status_code, 200)
         self.assertTrue(len(req_data.json()["all_transactions"]) == 1)
+        self.assertTrue(len(req_data_user.json()["all_transactions"]) == 1)
+
+    
 
