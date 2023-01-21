@@ -26,7 +26,8 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = ['localhost', 'cowry-backend.herokuapp.com', '127.0.0.1', 'testserver', '.cowryprotocol.io']
+ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['localhost', 'cowry-backend.herokuapp.com', '127.0.0.1', 'testserver', '.cowryprotocol.io', 'cowry-frontend.herokuapp.com']
 
 
 # Application definition
