@@ -267,19 +267,19 @@ class ON_RAMP_FIAT_USERS(APIView):
                             user_block_address=blockchainAddress,
                         )
                     except IntegrityError as e:
-                        if "UNIQUE constraint failed" in e.args[0]:
-                            return Response(
-                                {
-                                    "error": "there is a pending payment with this narration, please update transaction narration"
-                                },
-                                status=status.HTTP_400_BAD_REQUEST,
-                            )
-                        else:
-                            # notify admin
-                            return Response(
-                                {"error": "something went wrong"},
-                                status=status.HTTP_400_BAD_REQUEST,
-                            )
+                        # if "UNIQUE constraint failed" in e.args:
+                        return Response(
+                            {
+                                "error": "there is a pending payment with this narration, please update transaction narration"
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                        # else:
+                        #     # notify admin
+                        #     return Response(
+                        #         {"error": "something went wrong"},
+                        #         status=status.HTTP_400_BAD_REQUEST,
+                        #     )
                     else:
                         # IFPs should be able to cancel a pending transaction after a certain amount of time
                         # IFP should be able to specify the amount they receive with a particular transaction narration
@@ -648,7 +648,6 @@ class MerchantDepositConfirmation(APIView):
         elif user_key and query_type == "user":
             try:
                 all_transactions =get_transaction_by_pubKey(user_key)
-                print(all_transactions)
             except TransactionsTable.DoesNotExist:
                 return Response(
                     {"error": "address has no transaction yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
