@@ -35,6 +35,7 @@ jsonpickle==2.2.0
 kombu==5.2.4
 Markdown==3.3.6
 mnemonic==0.20
+model-bakery==1.9.0
 multidict==6.0.2
 packaging==21.3
 pluggy==1.0.0
