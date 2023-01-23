@@ -98,7 +98,7 @@ class User_Testing(TestSetUpClass):
         }
 
 
-        req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(
+        req_data = self.client.generic(method="POST", path=self.url, data=json.dumps(
             deposit_made_to_ma), content_type='application/json')
 
         self.assertTrue(req_data.status_code == 200)
@@ -123,7 +123,7 @@ class User_Testing(TestSetUpClass):
             "transaction_narration": self.random_string(10),
             "blockchainAddress": self.request_data["blockchainAddress"]
         }
-        req_data = self.client.generic(method="GET", path=self.url, data=json.dumps(
+        req_data = self.client.generic(method="POST", path=self.url, data=json.dumps(
             deposit_made_to_ma), content_type='application/json')
         self.assertEqual(req_data.status_code, 400)
         self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
