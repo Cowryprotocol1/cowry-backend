@@ -216,6 +216,7 @@ def update_PendingTransaction_Model(
     """
 
     a1 = TransactionsTable(
+        id=Id_generator(),
         users_address=user_block_address,
         transaction_type=transaction_type,
         transaction_amount=transaction_amt,
