@@ -27,16 +27,29 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DJANGO_DEBUG')
 
 ALLOWED_HOSTS = ['*']
-# ALLOWED_HOSTS = ['localhost', 'cowry-backend.herokuapp.com', '127.0.0.1', 'testserver', '.cowryprotocol.io', 'cowry-frontend.herokuapp.com']
+# ALLOWED_HOSTS = ['localhost:3000', 'cowry-backend.herokuapp.com', '127.0.0.1', 'testserver', '.cowryprotocol.io', 'cowry-frontend.herokuapp.com']
 
 
 # Application definition
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-
+CORS_ALLOW_HEADERS = [
+    'Authorization',
+    'Content-Type',
+    
+]
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
 
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
