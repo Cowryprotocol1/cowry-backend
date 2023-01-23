@@ -223,178 +223,187 @@ class ON_RAMP_FIAT_USERS(APIView):
     General endpoint for users deposits of fiat to get stablecoin
 
     """
-
     def post(self, request):
+        
         """
         Endpoint returns an NGN deposit address, memo and the MA that wants to process, this will return bank details of the MA
         deposit intent endpoint, the following are required params
         amount,
         user_blockchain_address
         """
+        if  request.data.get("memo") == None:
+            amount = request.data.get("amount")
+            bankType = request.data.get("bankType")
+            blockchainAddress = request.data.get("blockchainAddress")
+            transaction_narration = request.data.get("narration")
+            check_data = Fiat_On_RampSerializer(data=request.data)
 
-        amount = request.data.get("amount")
-        bankType = request.data.get("bankType")
-        blockchainAddress = request.data.get("blockchainAddress")
-        transaction_narration = request.data.get("narration")
-        check_data = Fiat_On_RampSerializer(data=request.data)
-        if check_data.is_valid():
-            # check if the address has a trustline for the NGN asset
-            is_asset_trusted = is_Asset_trusted(blockchainAddress, 1, STABLECOIN_ISSUER)
+            if check_data.is_valid():
+                # check if the address has a trustline for the NGN asset
+                is_asset_trusted = is_Asset_trusted(blockchainAddress, 1, STABLECOIN_ISSUER)
 
-            if is_asset_trusted[0] == True:
-                merchants_list = TokenTableSerializer(
-                    all_merchant_token_bal(), many=True
-                )
+                if is_asset_trusted[0] == True:
+                    merchants_list = TokenTableSerializer(
+                        all_merchant_token_bal(), many=True
+                    )
 
-                MA_selected = merchants_to_process_transaction(
-                    merchants_list.data, amount, bankType
-                )
-                # add filtering process for deposit and check for multiple deposit option
-                if MA_selected:
-                    try:
-                        update_pending_transaction_model(
-                            MA_selected["merchant"]["UID"],
-                            transaction_amt=str(
-                                float(amount) + float(GENERAL_TRANSACTION_FEE)
-                            ),
-                            transaction_type="deposit",
-                            narration=transaction_narration,
-                            transaction_memo=MA_selected["merchant"]["UID"],
-                            transaction_status="pending",
-                            phone_num=MA_selected["merchant"]["phoneNumber"],
-                            user_bank_account=MA_selected["merchant"]["bankAccount"],
-                            bank_name=MA_selected["merchant"]["bankName"],
-                            user_block_address=blockchainAddress,
-                        )
-                    except IntegrityError as e:
-                        # if "UNIQUE constraint failed" in e.args:
-                        return Response(
-                            {
-                                "error": "there is a pending payment with this narration, please update transaction narration"
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                        # else:
-                        #     # notify admin
-                        #     return Response(
-                        #         {"error": "something went wrong"},
-                        #         status=status.HTTP_400_BAD_REQUEST,
-                        #     )
+                    MA_selected = merchants_to_process_transaction(
+                        merchants_list.data, amount, bankType
+                    )
+                    # add filtering process for deposit and check for multiple deposit option
+                    if MA_selected:
+                        try:
+                            update_pending_transaction_model(
+                                MA_selected["merchant"]["UID"],
+                                transaction_amt=str(
+                                    float(amount) + float(GENERAL_TRANSACTION_FEE)
+                                ),
+                                transaction_type="deposit",
+                                narration=transaction_narration,
+                                transaction_memo=MA_selected["merchant"]["UID"],
+                                transaction_status="pending",
+                                phone_num=MA_selected["merchant"]["phoneNumber"],
+                                user_bank_account=MA_selected["merchant"]["bankAccount"],
+                                bank_name=MA_selected["merchant"]["bankName"],
+                                user_block_address=blockchainAddress,
+                            )
+                        except IntegrityError as e:
+                            # if "UNIQUE constraint failed" in e.args:
+                            return Response(
+                                {
+                                    "error": "there is a pending payment with this narration, please update transaction narration"
+                                },
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
+                            # else:
+                            #     # notify admin
+                            #     return Response(
+                            #         {"error": "something went wrong"},
+                            #         status=status.HTTP_400_BAD_REQUEST,
+                            #     )
+                        else:
+                            # IFPs should be able to cancel a pending transaction after a certain amount of time
+                            # IFP should be able to specify the amount they receive with a particular transaction narration
+                            transactionFeeAmt =  float(amount) + float(GENERAL_TRANSACTION_FEE)
+                            update_cleared_uncleared_bal(
+                                MA_selected["merchant"]["UID"], "uncleared", transactionFeeAmt
+                            )
+
+                            data = {
+                                "message": f"Send funds to account below with the following details, the correct amount to send is {float(amount) + float(GENERAL_TRANSACTION_FEE)}, please include your narration when making deposit in from your bank account",
+                                "memo": MA_selected["merchant"]["UID"],
+                                "amount": amount,
+                                "fee": GENERAL_TRANSACTION_FEE,
+                                "amount_to_pay":transactionFeeAmt,
+                                "narration": transaction_narration,
+                                "bank_name": MA_selected["merchant"]["bankName"],
+                                "account_number": MA_selected["merchant"]["bankAccount"],
+                                "phoneNumber": MA_selected["merchant"]["phoneNumber"],
+                                "eta": "5 minutes",
+                            }
+
+                            return Response(data=data, status=status.HTTP_200_OK)
                     else:
-                        # IFPs should be able to cancel a pending transaction after a certain amount of time
-                        # IFP should be able to specify the amount they receive with a particular transaction narration
-                        transactionFeeAmt =  float(amount) + float(GENERAL_TRANSACTION_FEE)
-                        update_cleared_uncleared_bal(
-                            MA_selected["merchant"]["UID"], "uncleared", transactionFeeAmt
+                        return Response(
+                            data={
+                                "error": "No merchant found",
+                                "message": "All MA are occupied at the moment or you are entering a very high amount",
+                            },
+                            status=status.HTTP_404_NOT_FOUND,
                         )
-
-                        data = {
-                            "message": f"Send funds to account below with the following details, the correct amount to send is {float(amount) + float(GENERAL_TRANSACTION_FEE)}, please include your narration when making deposit in from your bank account",
-                            "memo": MA_selected["merchant"]["UID"],
-                            "amount": amount,
-                            "fee": GENERAL_TRANSACTION_FEE,
-                            "amount_to_pay":transactionFeeAmt,
-                            "narration": transaction_narration,
-                            "Bank Name": MA_selected["merchant"]["bankName"],
-                            "account_number": MA_selected["merchant"]["bankAccount"],
-                            "phoneNumber": MA_selected["merchant"]["phoneNumber"],
-                            "eta": "5 minutes",
-                        }
-
-                        return Response(data=data, status=status.HTTP_200_OK)
                 else:
+                    assets = [{"code": STABLECOIN_CODE, "issuer": STABLECOIN_ISSUER}]
                     return Response(
-                        data={
-                            "error": "No merchant found",
-                            "message": "All MA are occupied at the moment or you are entering a very high amount",
+                        {
+                            "error": f"your address must add trustline to the following assets and also have enough balance for {STAKING_TOKEN}",
+                            "assets": assets,
                         },
-                        status=status.HTTP_404_NOT_FOUND,
+                        status=status.HTTP_400_BAD_REQUEST,
                     )
             else:
-                assets = [{"code": STABLECOIN_CODE, "issuer": STABLECOIN_ISSUER}]
                 return Response(
-                    {
-                        "error": f"your address must add trustline to the following assets and also have enough balance for {STAKING_TOKEN}",
-                        "assets": assets,
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
+                    {"error": check_data.errors}, status=status.HTTP_400_BAD_REQUEST
                 )
-        else:
-            return Response(
-                {"error": check_data.errors}, status=status.HTTP_400_BAD_REQUEST
-            )
 
-    def get(self, request):
-        """
-        Endpoint Users called when deposits has been sent to the merchant, bank account
-        Protocol notify merchant of a new pending transaction
-        """
-        # amount = request.data.get("amount")
 
-        _data = {}
-        _data["bank_name"] = request.data.get("bank_name")
-        _data["account_number"] = request.data.get("account_number")
-        _data["name_on_acct"] = None
-        _data["phone_number"] = request.data.get("phone_number")
-        _data["blockchain_address"] = request.data.get("blockchain_address")
-        _data["transaction_narration"] = request.data.get("transaction_narration")
-        _data["amount"] = request.data.get("amount")
-        memo = request.data.get("memo")
+# ==============================================================================
+# HANDLING MULTIPLE POST WITH A SINGLE CLASS BASED VIEW
+# ==============================================================================
 
-        # if memo and acct_number and amount and phone_number and bank_name and narration and user_blockchain_address:
-        check_args = Fiat_Off_RampSerializer(data=_data)
-        if check_args.is_valid() and memo:
-            try:
 
-                pending_merchant_tx = get_pending_transactions(memo)
-            except MerchantsTable.DoesNotExist:
-                return Response(
-                    {"error": "invalid memo"}, status=status.HTTP_404_NOT_FOUND
-                )
-            else:
-                for i in pending_merchant_tx:
-                    if i.transaction_type == "deposit":
-                        if (
-                            i.transaction_narration == _data["transaction_narration"]
-                            and i.users_address == _data["blockchain_address"]
-                            and float(i.transaction_amount) == float(_data["amount"])
-                        ):
-                            try:
-                                merchant_details = MerchantsTable.objects.get(UID=memo)
-                                Notifications(
-                                    recipient_email=merchant_details.email,
-                                    subject="Deposit Confirmation",
-                                    message=f"You have a pending deposit of {_data['amount']} NGN to your account, please login to confirm the transaction",
-                                )
-                            except Exception as e:
-                                # Notify admin
-                                print(e)
-                                return Response(
-                                    {"error": "something went wrong"},
-                                    status=status.HTTP_400_BAD_REQUEST,
-                                )
+
+        elif  request.data.get("memo") != None:
+
+            """
+            Endpoint Users called when deposits has been sent to the merchant, bank account
+            Protocol notify merchant of a new pending transaction
+            """
+            # amount = request.data.get("amount")
+
+            _data = {}
+            _data["bank_name"] = request.data.get("bank_name")
+            _data["account_number"] = request.data.get("account_number")
+            _data["name_on_acct"] = None
+            _data["phone_number"] = request.data.get("phone_number")
+            _data["blockchain_address"] = request.data.get("blockchain_address")
+            _data["transaction_narration"] = request.data.get("transaction_narration")
+            _data["amount"] = request.data.get("amount")
+            memo = request.data.get("memo")
+
+            # if memo and acct_number and amount and phone_number and bank_name and narration and user_blockchain_address:
+            check_args = Fiat_Off_RampSerializer(data=_data)
+            if check_args.is_valid() and memo:
+                try:
+
+                    pending_merchant_tx = get_pending_transactions(memo)
+                except MerchantsTable.DoesNotExist:
+                    return Response(
+                        {"error": "invalid memo"}, status=status.HTTP_404_NOT_FOUND
+                    )
+                else:
+                    for i in pending_merchant_tx:
+                        if i.transaction_type == "deposit":
+                            if (
+                                i.transaction_narration == _data["transaction_narration"]
+                                and i.users_address == _data["blockchain_address"]
+                                and float(i.transaction_amount) == float(_data["amount"])
+                            ):
+                                try:
+                                    merchant_details = MerchantsTable.objects.get(UID=memo)
+                                    Notifications(
+                                        recipient_email=merchant_details.email,
+                                        subject="Deposit Confirmation",
+                                        message=f"You have a pending deposit of {_data['amount']} NGN to your account, please login to confirm the transaction",
+                                    )
+                                except Exception as e:
+                                    # Notify admin
+                                    print(e)
+                                    return Response(
+                                        {"error": "something went wrong"},
+                                        status=status.HTTP_400_BAD_REQUEST,
+                                    )
+                                else:
+                                    return Response(
+                                        data={
+                                            "message": "Your Blockchain address will credited soon. Thank You"
+                                        },
+                                        status=status.HTTP_200_OK,
+                                    )
                             else:
-                                return Response(
-                                    data={
-                                        "message": "Your Blockchain address will credited soon. Thank You"
-                                    },
-                                    status=status.HTTP_200_OK,
-                                )
+                                pass
+
                         else:
                             pass
-
-                    else:
-                        pass
+                    return Response(
+                        "Transaction not found", status=status.HTTP_400_BAD_REQUEST
+                    )
+            if check_args.errors:
+                return Response(data=check_args.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
                 return Response(
-                    "Transaction not found", status=status.HTTP_400_BAD_REQUEST
+                    data={"error": "invalid memo params"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-        if check_args.errors:
-            return Response(data=check_args.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response(
-                data={"error": "invalid memo params"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
             #
 
@@ -404,7 +413,7 @@ class OFF_RAMP_FIAT(APIView):
     General endpoint for users to withdraw stablecoin to their bank account
     """
 
-    def get(self, request):
+    def post(self, request):
         # user call this endpoint
         # get merchant with allowed token  less than the license token
         # amount les than is equal to the amount the user want to withdrawal
