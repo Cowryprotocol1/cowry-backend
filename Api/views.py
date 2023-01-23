@@ -294,7 +294,7 @@ class ON_RAMP_FIAT_USERS(APIView):
                             "fee": GENERAL_TRANSACTION_FEE,
                             "amount_to_pay":transactionFeeAmt,
                             "narration": transaction_narration,
-                            "Bank Name": MA_selected["merchant"]["bankName"],
+                            "bank_name": MA_selected["merchant"]["bankName"],
                             "account_number": MA_selected["merchant"]["bankAccount"],
                             "phoneNumber": MA_selected["merchant"]["phoneNumber"],
                             "eta": "5 minutes",
