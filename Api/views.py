@@ -462,19 +462,19 @@ class OFF_RAMP_FIAT(APIView):
 
                 except IntegrityError as e:
                     print(e)
-                    if "UNIQUE constraint failed" in e.args[0]:
-                        return Response(
-                            {
-                                "error": "there is a pending payment with this narration, please update transaction narration"
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                    else:
-                        # notify admin
-                        return Response(
-                            {"error": "something went wrong"},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
+                    # if "UNIQUE constraint failed" in e.args[0]:
+                    return Response(
+                        {
+                            "error": "there is a pending payment with this narration, please update transaction narration"
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                    # else:
+                    #     # notify admin
+                    #     return Response(
+                    #         {"error": "something went wrong"},
+                    #         status=status.HTTP_400_BAD_REQUEST,
+                    #     )
                 else:
                     _resp_data = {}
                     _resp_data[
