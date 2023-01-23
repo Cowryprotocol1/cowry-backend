@@ -223,7 +223,6 @@ class ON_RAMP_FIAT_USERS(APIView):
     General endpoint for users deposits of fiat to get stablecoin
 
     """
-
     def post(self, request):
         """
         Endpoint returns an NGN deposit address, memo and the MA that wants to process, this will return bank details of the MA
@@ -404,7 +403,7 @@ class OFF_RAMP_FIAT(APIView):
     General endpoint for users to withdraw stablecoin to their bank account
     """
 
-    def get(self, request):
+    def post(self, request):
         # user call this endpoint
         # get merchant with allowed token  less than the license token
         # amount les than is equal to the amount the user want to withdrawal
