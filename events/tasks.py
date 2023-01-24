@@ -48,7 +48,7 @@ def transaction_list(staking_address=env_config("STAKING_ADDRESS"), withdrawal_a
             stake_transaction_time = datetime.strptime(splitted_date_time.split("Z")[0], "%Y-%m-%d %H:%M:%S")
             if  stake_transaction_time >= datetime.strptime(last_updated_time, "%Y-%m-%d %H:%M:%S"):
                 print("forward one to celery")
-                isTransaction_Valid.delay(transaction_hash=hash_, memo=tx_memo)
+                isTransaction_Valid.delay(transaction_hash=hash_, memo=tx_memo, event_transaction_type="merchant_staking")
     try:
         withdrawal_transaction = horizon_server.transactions().for_account(withdrawal_address).limit(200).call()
     except Exception as err:

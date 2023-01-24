@@ -32,6 +32,8 @@ if __name__ == '__main__':
     logging.critical("connect celery with command'celery -A stablecoin worker -l INFO'")
     logging.info("add merchant specific off boarding from the protocol, this will handle reconcile the fee they have accumulated on their acct")
     logging.critical("complete api test for other apis")
+    logging.critical("complete api test to include testing adding removing, etx transactions and IFPs")
+
 
     
     
