@@ -123,7 +123,7 @@ def isTransaction_Valid(
                                 print("Transaction failed")
                                 # Transaction failed, send notification to admin group
                         except:
-                            print(e)
+                            # print(e)
                             print("this is a critical error")
                             pass
 
