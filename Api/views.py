@@ -461,7 +461,8 @@ class OFF_RAMP_FIAT(APIView):
                     )
 
                 except IntegrityError as e:
-                    print(e)
+                    print("this endpoint",e)
+
                     # if "UNIQUE constraint failed" in e.args[0]:
                     return Response(
                         {

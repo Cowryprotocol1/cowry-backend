@@ -74,7 +74,7 @@ def get_merchant_by_pubKey(merchant_pubKey: str) -> MerchantsTable:
 
 
 def update_merchant_by_allowedLicenseAmount(
-    merchant_id: str, allowedLicenseAmt: int, stakedAmt: int, exchangeRate: int
+    merchant_id: str, allowedLicenseAmt: int, stakedAmt: int, exchangeRate: int, stakingHash:str
 ) -> bool:
     # update allowed and license token balance on minting
     try:
@@ -84,6 +84,7 @@ def update_merchant_by_allowedLicenseAmount(
         merchant_bal.licenseTokenAmount += float(allowedLicenseAmt)
         merchant_bal.stakedTokenAmount += float(stakedAmt)
         merchant_bal.stakedTokenExchangeRate = exchangeRate
+        merchant_bal.stakingTx_hash = stakingHash
 
         merchant_bal.save()
         return True
@@ -136,14 +137,14 @@ def get_pending_transactions(merchant: str) -> QuerySet:
 
 def get_all_transaction_for_merchant(merchant:object) -> QuerySet:
     merchant_obj = MerchantsTable.objects.get(UID=merchant)
-    transaction_list = TransactionsTable.objects.filter(merchant=merchant_obj)
+    transaction_list = TransactionsTable.objects.filter(merchant=merchant_obj).order_by("-created_at") #using the - before the colum name means descending order
     return transaction_list
 
 def get_transaction_by_pubKey(pubKey: str) -> QuerySet:
     """
     Used to get transaction by public key
     """
-    transaction_ = TransactionsTable.objects.filter(users_address=pubKey)
+    transaction_ = TransactionsTable.objects.filter(users_address=pubKey).order_by('-created_at')
     return transaction_
 
 
@@ -341,8 +342,8 @@ def delete_merchant(merchant: str) -> bool:
 
 def protocolAudit():
     all_merchants = TokenTable.objects.all()
-    _edited = all_merchants.values("merchant_id__blockchainAddress").annotate(
-
+    _edited = all_merchants.values(ifp_blockchain_addr=F("merchant_id__blockchainAddress")).annotate(
+        staked_token_hash = F('stakingTx_hash'),
         total_staked_usdc = F('stakedTokenAmount'),
         exchange_rate = F('stakedTokenExchangeRate'),
         total_mint_right = F('licenseTokenAmount'),
@@ -355,6 +356,13 @@ def protocolAudit():
 
 
 
+
+
+
+# adc = protocolAudit()
+
+
+# print(adc)
 
 # merchants = MerchantsTable.objects.get(UID="8f9ee6190c5bb9ccb2f3")
 # print(merchants)
