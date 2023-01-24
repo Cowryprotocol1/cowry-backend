@@ -107,38 +107,58 @@ def isTransaction_Valid(
                 try:
                     if event_transaction_type == "merchant_staking":
                         print("got inside")
-                        update_hash = add_and_update_transaction_hash(
-                            transaction_hash, memo
-                        )  # add transaction hash to db and update the merchant txhash table
-                        #    Determin how much to mint using the value Naira to USD
-                        print("update_hash")
-                        print(update_hash)
-                        if update_hash == True:
-                            try:
-                                # determine the amount of allowed and license token to mint to the merchant
-                                [mint_amt, price] = amount_to_naira(amt)
-                                update_balance_details = (
-                                    update_merchant_by_allowedLicenseAmount(
-                                        memo, mint_amt, amt, price
+                        try:
+                            [mint_amt, price] = amount_to_naira(amt)
+                            update_balance_details = (
+                                        update_merchant_by_allowedLicenseAmount(
+                                            memo, mint_amt, amt, price, transaction_hash
+                                        )
                                     )
-                                )
-                                if update_balance_details == True:
+
+                            if update_balance_details == True:
                                     Mint_Token(
                                         sender, round(float(mint_amt), 7), str(memo)
                                     )
-                                else:
-                                    print("Transaction failed")
-                                    # Transaction failed, send notification to admin group
-                            except Exception as e:
-                                # Critical error, need to send to admin
-                                print(e)
-                                print("this is a critical error")
-                                pass
-                        elif update_hash == False:
-                            print(
-                                "Transaction hash already processed or merchant with the memo not found"
-                            )
+                            else:
+                                print("Transaction failed")
+                                # Transaction failed, send notification to admin group
+                        except:
+                            print(e)
+                            print("this is a critical error")
                             pass
+
+                        # update_hash = add_and_update_transaction_hash(
+                        #     transaction_hash, memo
+                        # )  # add transaction hash to db and update the merchant txhash table
+                        # #    Determin how much to mint using the value Naira to USD
+                        # print("update_hash")
+                        # print(update_hash)
+                        # if update_hash == True:
+                            # try:
+                            #     # determine the amount of allowed and license token to mint to the merchant
+                            #     [mint_amt, price] = amount_to_naira(amt)
+                            #     update_balance_details = (
+                            #         update_merchant_by_allowedLicenseAmount(
+                            #             memo, mint_amt, amt, price
+                            #         )
+                            #     )
+                            #     if update_balance_details == True:
+                            #         Mint_Token(
+                            #             sender, round(float(mint_amt), 7), str(memo)
+                            #         )
+                            #     else:
+                            #         print("Transaction failed")
+                            #         # Transaction failed, send notification to admin group
+                            # except Exception as e:
+                            #     # Critical error, need to send to admin
+                            #     print(e)
+                            #     print("this is a critical error")
+                                # pass
+                        # elif update_hash == False:
+                        #     print(
+                        #         "Transaction hash already processed or merchant with the memo not found"
+                        #     )
+                        #     pass
 
                     elif event_transaction_type == "user_withdrawals":
                         try:

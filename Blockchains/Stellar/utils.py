@@ -41,8 +41,7 @@ def check_address_balance(address:str, asset_issuer:str, asset_code:str, check_a
                     pass
     return False
 
-def protocolAssetTotalSupply(assets:dict = {ALLOWED_AND_LICENSE_P_ADDRESS: ALLOWED_TOKEN_CODE,
-            STABLECOIN_ISSUER: STABLECOIN_CODE}):
+def protocolAssetTotalSupply(assets:dict = {STABLECOIN_ISSUER: STABLECOIN_CODE}):
     """Use to get the total supply of protocol supply"""
     # accts = {
     #         ALLOWED_AND_LICENSE_P_ADDRESS: ALLOWED_TOKEN_CODE,
@@ -58,8 +57,6 @@ def protocolAssetTotalSupply(assets:dict = {ALLOWED_AND_LICENSE_P_ADDRESS: ALLOW
         _values = list(assets.values())[i]
         try:
             bala = horizon_server.assets().for_code(_values).for_issuer(_keys).call()
-            print("----------------")
-            print(bala)
             for i in bala["_embedded"]["records"]:
                 _asset_supply[_values] = {
                     # "total_accounts": i["accounts"],

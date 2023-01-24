@@ -3,6 +3,7 @@ from utils.utils import uidGenerator
 from Blockchains.Stellar.operations import is_account_valid
 from rest_framework import serializers
 from utils.utils import Id_generator
+from django.utils import timezone
 
 # Create your models here.
 
@@ -58,6 +59,7 @@ class TokenTable(models.Model):
     licenseTokenAmount = models.FloatField(default=0, blank=True)
     stakedTokenExchangeRate = models.FloatField(default=0, blank=True)
     unclear_bal = models.FloatField(default=0, blank=True)
+    stakingTx_hash = models.CharField(max_length=128, blank=True, default=0)
 
 
 class TxHashTable(models.Model):
@@ -69,7 +71,6 @@ class TxHashTable(models.Model):
 
 
 class TransactionsTable(models.Model):
-    print("clear processed transaction narration")
     # This would hold details about a merchant and the amount of transaction to merchant has in pending
     # details should include the recipient address, the merchants object, amount pending
     merchant = models.ManyToManyField(MerchantsTable)
@@ -90,7 +91,7 @@ class TransactionsTable(models.Model):
     transaction_narration = models.CharField(
         max_length=128, default=uidGenerator(), null=False, unique=True
     )
-
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
 
 class XdrGeneratedTransaction(models.Model):
     merchant = models.ManyToManyField(MerchantsTable)
