@@ -185,7 +185,7 @@ class OnBoardMA(APIView):
                     )
                 else:
                     data = {
-                        "msg": f"please send {STABLECOIN_CODE} to the below details",
+                        "msg": f"please send {STAKING_TOKEN} to the below details",
                         "memo": merchant_saved.UID,
                         "staking_address": staking_address,
                         "staking_asset_code": STAKING_TOKEN,
