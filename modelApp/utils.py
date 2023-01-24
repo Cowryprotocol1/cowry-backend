@@ -89,9 +89,10 @@ def update_merchant_by_allowedLicenseAmount(
         merchant_bal.save()
         return True
     except Exception as e:
-        # print(e.args)
+        print("nah inside update merchant allowed")
+        print(e.args)
         # notify admin
-        return e.args
+        return False
 
 
 def all_merchant_token_bal() -> list:

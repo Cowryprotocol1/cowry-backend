@@ -122,8 +122,11 @@ def isTransaction_Valid(
                             else:
                                 print("Transaction failed")
                                 # Transaction failed, send notification to admin group
-                        except:
-                            # print(e)
+                        except Exception as error:
+                            print("mah this place we dey")
+                            print(error)
+                            print(error.args)
+                            print(error.with_traceback())
                             print("this is a critical error")
                             pass
 
