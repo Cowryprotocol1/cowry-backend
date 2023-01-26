@@ -185,7 +185,7 @@ class OnBoardMA(APIView):
                     )
                 else:
                     data = {
-                        "msg": f"please send {STABLECOIN_CODE} to the below details",
+                        "msg": f"please send {STAKING_TOKEN} to the below details",
                         "memo": merchant_saved.UID,
                         "staking_address": staking_address,
                         "staking_asset_code": STAKING_TOKEN,
@@ -535,93 +535,93 @@ class OFF_BOARDING_MA(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             else:
-                try:
+                # try:
 
-                    token_balance = TokenTable.objects.get(merchant=merchant_object)
-                except TokenTable.DoesNotExist:
-                    return Response(
-                        {"error": "Merchant Not found"},
-                        status=status.HTTP_404_NOT_FOUND,
-                    )
-                else:
-                    if token_balance.licenseTokenAmount > 0:
-                        if (
-                            token_balance.licenseTokenAmount
-                            > token_balance.allowedTokenAmount
-                            and merchant_object.blockchainAddress == merchant_PubKey
-                        ):
-                            response = {
-                                "error": "You can't perform this transaction yet, you are holding some fiat in your account",
-                                "outstanding_fiat": token_balance.licenseTokenAmount
-                                - token_balance.allowedTokenAmount,
-                            }
-                            return Response(
-                                response, status=status.HTTP_400_BAD_REQUEST
-                            )
-                        else:
-                            print(
-                                "Need to handle removing merchant before submission of transaction"
-                            )
-                            remove_merchant = delete_merchant(merchant_object.UID)
-                            if remove_merchant == True:
-                                try:
-                                    raw_xdr = OffBoard_Merchant_with_Burn(
-                                        recipient_pub_key=merchant_PubKey,
-                                        amount=round(
-                                            float(token_balance.licenseTokenAmount), 7
+                #     token_balance = TokenTable.objects.get(merchant=merchant_object)
+                # except TokenTable.DoesNotExist:
+                #     return Response(
+                #         {"error": "Merchant Not found"},
+                #         status=status.HTTP_404_NOT_FOUND,
+                #     )
+                # else:
+                if float(merchant_object["licenseTokenAmount"]) > 0:
+                    if (
+                        float(merchant_object["licenseTokenAmount"])
+                        > float(merchant_object["allowedTokenAmount"])
+                        and merchant_object['ifp_block_addr'] == merchant_PubKey
+                    ):
+                        response = {
+                            "error": "You can't perform this transaction yet, you are holding some fiat in your account",
+                            "outstanding_fiat": float(merchant_object["licenseTokenAmount"])
+                            - float(merchant_object["allowedTokenAmount"]),
+                        }
+                        return Response(
+                            response, status=status.HTTP_400_BAD_REQUEST
+                        )
+                    else:
+                        print(
+                            "Need to handle removing merchant before submission of transaction"
+                        )
+                        remove_merchant = delete_merchant(merchant_object["account_id"])
+                        if remove_merchant == True:
+                            try:
+                                raw_xdr = OffBoard_Merchant_with_Burn(
+                                    recipient_pub_key=merchant_PubKey,
+                                    amount=round(
+                                        float(merchant_object["licenseTokenAmount"]), 7
+                                    ),
+                                    memo=merchant_Id,
+                                    exchange_rate=round(
+                                        float(
+                                            merchant_object["stakedTokenExchangeRate"]
                                         ),
-                                        memo=merchant_Id,
-                                        exchange_rate=round(
-                                            float(
-                                                token_balance.stakedTokenExchangeRate
-                                            ),
-                                            7,
-                                        ),
-                                        total_staked_amt=round(
-                                            float(token_balance.stakedTokenAmount), 7
-                                        ),
-                                    )
-                                except Exception as e:
-                                    print(e)
-                                    return Response(
-                                        {"error": "something went wrong"},
-                                        status=status.HTTP_400_BAD_REQUEST,
-                                    )
-                                else:
-                                    logging.info(
-                                        "We need to handle situations were merchant failed to submit the transaction, maybe by moving the merchant to a state that is  not accessible by the api"
-                                    )
-                                    MerchantsTable.objects.filter(
-                                        UID=merchant_Id
-                                    ).delete()
-                                    _message = {}
-                                    _message[
-                                        "message"
-                                    ] = "Please sign and submit the XDR below within 30min to complete the transaction"
-                                    _message["raw_xdr"] = raw_xdr
-                                    logging.info(
-                                        f"Offboarding merchant {merchant_Id}, need to add interest calculation to the amount the merchant get"
-                                    )
-                                return Response(
-                                    data=_message, status=status.HTTP_200_OK
+                                        7,
+                                    ),
+                                    total_staked_amt=round(
+                                        float(merchant_object["stakedTokenAmount"]), 7
+                                    ),
                                 )
-                            else:
+                            except Exception as e:
+                                print(e)
                                 return Response(
-                                    {"error": "Something went wrong"},
+                                    {"error": "something went wrong"},
                                     status=status.HTTP_400_BAD_REQUEST,
                                 )
-                    elif token_balance.licenseTokenAmount == 0:
-                        return Response(
-                            data={
-                                "error": f"Merchant with public key {merchant_PubKey} is not fully register yet and so can't offBoard itself, please stake to the protocol address and try again"
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-
+                            else:
+                                logging.info(
+                                    "We need to handle situations were merchant failed to submit the transaction, maybe by moving the merchant to a state that is  not accessible by the api"
+                                )
+                                MerchantsTable.objects.filter(
+                                    UID=merchant_Id
+                                ).delete()
+                                _message = {}
+                                _message[
+                                    "message"
+                                ] = "Please sign and submit the XDR below within 30min to complete the transaction"
+                                _message["raw_xdr"] = raw_xdr
+                                logging.info(
+                                    f"Offboarding merchant {merchant_Id}, need to add interest calculation to the amount the merchant get"
+                                )
+                            return Response(
+                                data=_message, status=status.HTTP_200_OK
+                            )
+                        else:
+                            return Response(
+                                {"error": "Something went wrong"},
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
+                elif token_balance.licenseTokenAmount == 0:
                     return Response(
-                        {"error": "Merchant has no license token"},
-                        status=status.HTTP_404_NOT_FOUND,
+                        data={
+                            "error": f"Merchant with public key {merchant_PubKey} is not fully register yet and so can't offBoard itself, please stake to the protocol address and try again"
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
                     )
+
+                return Response(
+                    {"error": "Merchant has no license token"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
         else:
             return Response(
                 {"error": serialized_obj.errors}, status=status.HTTP_400_BAD_REQUEST
@@ -642,48 +642,68 @@ class MerchantDepositConfirmation(APIView):
         """
         user_key = self.request.query_params.get("public_key")
         query_type =  self.request.query_params.get("query_type")
-        if user_key and query_type == "ifp":
-            try:
-                merchant_details = get_merchant_by_pubKey(
-                    merchant_pubKey=user_key
-                )
-            except MerchantsTable.DoesNotExist:
-                return Response(
-                    {"error": "address not a merchant yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
-                )
-            else:
-                all_transactions = get_all_transaction_for_merchant(
-                merchant_details.UID
-                    )
-        elif user_key and query_type == "user":
+        if user_key and query_type == "ifp"  or user_key and query_type == "user":
+            
             try:
                 all_transactions =get_transaction_by_pubKey(user_key)
             except TransactionsTable.DoesNotExist:
                 return Response(
                     {"error": "address has no transaction yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
                 )
-                
+            else:
+                if all_transactions:
+                    return Response(
+                        {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User", 'status':"success"},
+                        status=status.HTTP_200_OK,
+                    )
+                else:
+                    return Response(
+                        data={"error": "No transactions found", "status":"fail"},
+                        status=status.HTTP_404_NOT_FOUND,
+                    )
         else:
             return Response(
                 data={"error": "Please provide a public key and query_type"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-            
-        if all_transactions:
-            return Response(
-                {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User", 'status':"success"},
-                status=status.HTTP_200_OK,
-            )
-        else:
-            return Response(
-                data={"error": "No transactions found", "status":"fail"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        #     try:
+        #         merchant_details = get_merchant_by_pubKey(
+        #             merchant_pubKey=user_key
+        #         )
+
+        #     except MerchantsTable.DoesNotExist:
+        #         return Response(
+        #             {"error": "address not a merchant yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
+        #         )
+        #     else:
+        #         all_transactions = get_all_transaction_for_merchant(
+        #         merchant_details.UID
+        #             )
+        # elif user_key and query_type == "user":
+        #     try:
+        #         all_transactions =get_transaction_by_pubKey(user_key)
+        #     except TransactionsTable.DoesNotExist:
+        #         return Response(
+        #             {"error": "address has no transaction yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
+        #         )
+                
         # else:
-            # return Response(
-            #     data={"error": "Please provide merchant public key"},
-            #     status=status.HTTP_400_BAD_REQUEST,
-            # )
+        #     return Response(
+        #         data={"error": "Please provide a public key and query_type"},
+        #         status=status.HTTP_400_BAD_REQUEST,
+        #     )
+            
+        # if all_transactions:
+        #     return Response(
+        #         {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User", 'status':"success"},
+        #         status=status.HTTP_200_OK,
+        #     )
+        # else:
+        #     return Response(
+        #         data={"error": "No transactions found", "status":"fail"},
+        #         status=status.HTTP_404_NOT_FOUND,
+        #     )
+        
 
     def post(self, request):
         # to do
@@ -941,44 +961,69 @@ class AccountDetails(APIView):
         else:
             try:
                 merchant = get_merchant_by_pubKey(pub_key)
-                # print(merchant)
-                # print(merchant.UID)
-
-                # print(".")
-
             except MerchantsTable.DoesNotExist:
                 return Response(
                     {"msg": f"merchant with account id {pub_key} does not exist", "status":"fail"},
                     status=status.HTTP_404_NOT_FOUND,
                 )
-            else:
 
-                try:
-                    merchant_bal = TokenTable.objects.get(merchant=merchant)
-                except TokenTable.DoesNotExist:
-                    return Response(
-                        {"msg": "Merchant not found", "status":"fail"}, status=status.HTTP_404_NOT_FOUND
-                    )
-                else:
-                    fiat_in_bank =  round(float(merchant_bal.licenseTokenAmount)
-                    - (float(merchant_bal.allowedTokenAmount) + float(merchant_bal.unclear_bal)),
+            else:
+                fiat_in_bank =  round(float(merchant["licenseTokenAmount"])
+                    - (float(merchant["allowedTokenAmount"]) + float(merchant["unclear_bal"])),
                         7,
                     )
 
-                    data = {}
-                    data["Amount_staked"] = merchant_bal.stakedTokenAmount
-                    data["value_in_stablecoin"] = merchant_bal.licenseTokenAmount
-                    data["exchange_rate"] = merchant_bal.stakedTokenExchangeRate
-                    data["pending_transaction"] = merchant_bal.unclear_bal
-                    data["total_fiat_held_in_bank_acct"] = fiat_in_bank
-                    data["allowed_token"] = float(merchant_bal.licenseTokenAmount) - (float(merchant_bal.unclear_bal) + float(fiat_in_bank))
-                    data["status"] = "successful"
-                    # should include amount of allowed token left
-                    # data[
-                    #     "msg"
-                    # ] = "the total_fiat_held_in_bank_acct is not final, pending transaction are also added to the amount"
+                data = {}
+                data["Amount_staked"] = merchant["stakedTokenAmount"]
+                data["value_in_stablecoin"] = merchant["licenseTokenAmount"]
+                data["exchange_rate"] = merchant["stakedTokenExchangeRate"]
+                data["pending_transaction"] = merchant["unclear_bal"]
+                data["total_fiat_held_in_bank_acct"] = fiat_in_bank
+                data["allowed_token"] = float(merchant["licenseTokenAmount"]) - (float(merchant["unclear_bal"]) + float(fiat_in_bank))
+                data["status"] = "successful"
+                merchant.update(data)
+                # should include amount of allowed token left
+                # data[
+                #     "msg"
+                # ] = "the total_fiat_held_in_bank_acct is not final, pending transaction are also added to the amount"
 
-                    return Response(data, status=status.HTTP_200_OK)
+                return Response(merchant, status=status.HTTP_200_OK)
+
+                # print(".")
+
+            # except MerchantsTable.DoesNotExist:
+            #     return Response(
+            #         {"msg": f"merchant with account id {pub_key} does not exist", "status":"fail"},
+            #         status=status.HTTP_404_NOT_FOUND,
+            #     )
+            # else:
+
+            #     try:
+            #         merchant_bal = TokenTable.objects.get(merchant=merchant)
+            #     except TokenTable.DoesNotExist:
+            #         return Response(
+            #             {"msg": "Merchant not found", "status":"fail"}, status=status.HTTP_404_NOT_FOUND
+            #         )
+            #     else:
+            #         fiat_in_bank =  round(float(merchant_bal.licenseTokenAmount)
+            #         - (float(merchant_bal.allowedTokenAmount) + float(merchant_bal.unclear_bal)),
+            #             7,
+            #         )
+
+            #         data = {}
+            #         data["Amount_staked"] = merchant_bal.stakedTokenAmount
+            #         data["value_in_stablecoin"] = merchant_bal.licenseTokenAmount
+            #         data["exchange_rate"] = merchant_bal.stakedTokenExchangeRate
+            #         data["pending_transaction"] = merchant_bal.unclear_bal
+            #         data["total_fiat_held_in_bank_acct"] = fiat_in_bank
+            #         data["allowed_token"] = float(merchant_bal.licenseTokenAmount) - (float(merchant_bal.unclear_bal) + float(fiat_in_bank))
+            #         data["status"] = "successful"
+            #         # should include amount of allowed token left
+            #         # data[
+            #         #     "msg"
+            #         # ] = "the total_fiat_held_in_bank_acct is not final, pending transaction are also added to the amount"
+
+            #         return Response(data, status=status.HTTP_200_OK)
 
 
 class EventListener(APIView):

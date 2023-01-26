@@ -4,10 +4,10 @@ from stellar_sdk.keypair import Keypair
 
 
 
-def uidGenerator(size=10):
-    return ''.join(secrets.token_hex(size))
+def uidGenerator(size=8):
+    sec = ''.join(secrets.token_hex(size))
+    return '500' + str(sec)
 
-    
 def createStellarAddress():
     keys = Keypair.random()
     return {"pubKey": keys.public_key, "privKey": keys.secret}

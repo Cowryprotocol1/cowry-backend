@@ -65,12 +65,18 @@ def add_and_update_transaction_hash(_hash: str, merchant_id: str) -> bool:
 
 
 def get_merchant_by_pubKey(merchant_pubKey: str) -> MerchantsTable:
-    merchant = MerchantsTable.objects.get(blockchainAddress=merchant_pubKey)
-    return merchant
-
-
-# print(get_merchant_by_pubKey(
-#     "GCIKDUYN2OW7GF25XOGTHPRKPTACEF5CQJR3QNFANWKCJWGFB2S6FA6J"))
+    merchant = MerchantsTable.objects.all().filter(blockchainAddress=merchant_pubKey)
+    _value_merchant = merchant.values(stakedTokenAmount=F("tokentable__stakedTokenAmount"), licenseTokenAmount=F("tokentable__licenseTokenAmount"), account_id=F("UID"),
+    stakedTokenExchangeRate=F("tokentable__stakedTokenExchangeRate"),unclear_bal=F("tokentable__unclear_bal"), allowedTokenAmount=F("tokentable__allowedTokenAmount"))
+    annotate_qs = _value_merchant.annotate(
+        ifp_acct_name= F("bankName"),
+        ifp_email_addr= F("email"),
+        ifp_acct_number= F("bankAccount"),
+        ifp_phone_name= F("phoneNumber"),
+        ifp_block_addr= F("blockchainAddress"),
+        ifp_process_status = F("transaction_processing_status")
+    )
+    return annotate_qs[0]
 
 
 def update_merchant_by_allowedLicenseAmount(
@@ -89,9 +95,10 @@ def update_merchant_by_allowedLicenseAmount(
         merchant_bal.save()
         return True
     except Exception as e:
-        # print(e.args)
+        print("nah inside update merchant allowed")
+        print(e.args)
         # notify admin
-        return e.args
+        return False
 
 
 def all_merchant_token_bal() -> list:
