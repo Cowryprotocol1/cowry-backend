@@ -34,6 +34,7 @@ if __name__ == '__main__':
     logging.critical("complete api test for other apis")
     logging.critical("complete api test to include testing adding removing, etx transactions and IFPs")
     logging.critical("what happen when an existing IFP with transaction hash try to top and then call the listen endpoint with the old hash")
+    logging.critical("restrict IFP from making deposits and withdrawals directly from their own acct")
 
 
     
