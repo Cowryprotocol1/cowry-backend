@@ -961,7 +961,7 @@ class AccountDetails(APIView):
         else:
             try:
                 merchant = get_merchant_by_pubKey(pub_key)
-            except MerchantsTable.DoesNotExist:
+            except (MerchantsTable.DoesNotExist, IndexError):
                 return Response(
                     {"msg": f"merchant with account id {pub_key} does not exist", "status":"fail"},
                     status=status.HTTP_404_NOT_FOUND,
