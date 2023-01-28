@@ -125,8 +125,6 @@ def isTransaction_Valid(
                         except Exception as error:
                             print("mah this place we dey")
                             print(error)
-                            print(error.args)
-                            print(error.with_traceback())
                             print("this is a critical error")
                             pass
 
