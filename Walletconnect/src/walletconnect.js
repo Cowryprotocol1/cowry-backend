@@ -14,19 +14,19 @@ async function WalletConnectTest(event) {
     console.log(window.freighter);
     const kit = new StellarWalletsKit({
       network: WalletNetwork.PUBLIC,
-      selectedWallet: WalletType.RABET,
+      selectedWallet: WalletType.FREIGHTER,
     });
-    const publicKey = await kit.getPublicKey();
+    // const publicKey = await kit.getPublicKey();
 
     console.log(kit)
-    console.log(publicKey)
+    // console.log(publicKey)
 
-    const signtx = await kit.sign({
-      xdr: "AAAAAgAAAAAIBIMxkJMZ48FNWgMkSEUVnHngK7DjsSyXHDBNuU9dlQAACeoCAjeOAAAAAQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAAIBIMxkJMZ48FNWgMkSEUVnHngK7DjsSyXHDBNuU9dlQAAAAAAAAAAAmJaAAAAAAAAAAAA",
-      publicKey:publicKey
-    });
+    // const signtx = await kit.sign({
+    //   xdr: "AAAAAgAAAAAIBIMxkJMZ48FNWgMkSEUVnHngK7DjsSyXHDBNuU9dlQAACeoCAjeOAAAAAQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAAIBIMxkJMZ48FNWgMkSEUVnHngK7DjsSyXHDBNuU9dlQAAAAAAAAAAAmJaAAAAAAAAAAAA",
+    //   publicKey:publicKey
+    // });
 
-    console.log(signtx)
+    // console.log(signtx)
   }
 
   }
