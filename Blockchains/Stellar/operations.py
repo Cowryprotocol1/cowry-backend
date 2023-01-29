@@ -71,6 +71,13 @@ def get_network_passPhrase(horizon_url=config("HORIZON_URL")) -> Network:
         return Network.PUBLIC_NETWORK_PASSPHRASE
 
 
+def get_stellarActive_network(network_url:str):
+    if "testnet" in network_url:
+        return "Testnet"
+    else:
+        return "Public"
+
+
 def is_account_valid(account_address: str) -> bool:
     try:
         check = get_horizon_server().accounts().account_id(account_address).call()
