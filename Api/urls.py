@@ -20,7 +20,8 @@ urlpatterns = [
     path("sep6/info", sepInfo, name="sep6Info"), #tested
     path("sep6/withdraw", sep6Withdrawal, name="sep6Withdraw"), #tested
     path("submit_xdr", SubmitAnXdr.as_view(), name="submitxdr"),
-    path("audit_protocol", auditProtocol, name="audit") #tested
+    path("audit_protocol", auditProtocol, name="audit"), #tested
+    path("transactionStatus", transactionStatus, name="transactionStatus")
     # path("canceltransaction", TransactionExpire.as_view(), name="TransactionExpire")
     
 
