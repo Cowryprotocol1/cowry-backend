@@ -17,7 +17,7 @@ from Blockchains.Stellar.operations import (
     get_horizon_server,
     merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor,
 )
-from Blockchains.Stellar.utils import check_address_balance,getStellar_tx_fromMemo, check_stellar_address, protocolAssetTotalSupply, queryTransactionStatus
+from Blockchains.Stellar.utils import check_address_balance,getStellar_tx_fromMemo, check_stellar_address, protocolAssetTotalSupply
 from decouple import config
 from django.db import IntegrityError
 from django.http import JsonResponse, HttpResponse
@@ -27,8 +27,6 @@ from modelApp.utils import (
     protocolAudit,
     delete_merchant,
     get_merchant_by_pubKey,
-    is_transaction_memo_valid,
-    remove_transaction_from_merchants_model,
     update_transaction_status,
     get_transaction_By_Id,
     get_pending_transactions,
@@ -760,10 +758,7 @@ class MerchantDepositConfirmation(APIView):
 
                                 # update the state of the transaction
                                 update_transaction_status(transaction_id=deposit_withdrawal_Id, status='completed')
-                                # remove_transaction_from_merchants_model(
-                                #     merchants_Id, deposit_withdrawal_Id,
-                                #     amount=amount_deposit
-                                # )
+                            
                             except Exception as e:
                                 # notify admin
                                 print(e)
@@ -829,9 +824,7 @@ class MerchantDepositConfirmation(APIView):
                             # and their allowed token should be -fee
                             try:
                                 update_cleared_uncleared_bal(merchants_Id, "cleared", transaction.transaction_amount)
-                                # remove_transaction_from_merchants_model(
-                                #     merchants_Id, deposit_withdrawal_Id, amount=0,
-                                # )
+                        
                                 update_transaction_status(deposit_withdrawal_Id, status='completed')
                             except Exception as e:
                                 # notify admin
@@ -956,92 +949,8 @@ class AccountDetails(APIView):
                 data["allowed_token"] = float(merchant["licenseTokenAmount"]) - (float(merchant["unclear_bal"]) + float(fiat_in_bank))
                 data["status"] = "successful"
                 merchant.update(data)
-                # should include amount of allowed token left
-                # data[
-                #     "msg"
-                # ] = "the total_fiat_held_in_bank_acct is not final, pending transaction are also added to the amount"
 
                 return Response(merchant, status=status.HTTP_200_OK)
-
-                # print(".")
-
-            # except MerchantsTable.DoesNotExist:
-            #     return Response(
-            #         {"msg": f"merchant with account id {pub_key} does not exist", "status":"fail"},
-            #         status=status.HTTP_404_NOT_FOUND,
-            #     )
-            # else:
-
-            #     try:
-            #         merchant_bal = TokenTable.objects.get(merchant=merchant)
-            #     except TokenTable.DoesNotExist:
-            #         return Response(
-            #             {"msg": "Merchant not found", "status":"fail"}, status=status.HTTP_404_NOT_FOUND
-            #         )
-            #     else:
-            #         fiat_in_bank =  round(float(merchant_bal.licenseTokenAmount)
-            #         - (float(merchant_bal.allowedTokenAmount) + float(merchant_bal.unclear_bal)),
-            #             7,
-            #         )
-
-            #         data = {}
-            #         data["Amount_staked"] = merchant_bal.stakedTokenAmount
-            #         data["value_in_stablecoin"] = merchant_bal.licenseTokenAmount
-            #         data["exchange_rate"] = merchant_bal.stakedTokenExchangeRate
-            #         data["pending_transaction"] = merchant_bal.unclear_bal
-            #         data["total_fiat_held_in_bank_acct"] = fiat_in_bank
-            #         data["allowed_token"] = float(merchant_bal.licenseTokenAmount) - (float(merchant_bal.unclear_bal) + float(fiat_in_bank))
-            #         data["status"] = "successful"
-            #         # should include amount of allowed token left
-            #         # data[
-            #         #     "msg"
-            #         # ] = "the total_fiat_held_in_bank_acct is not final, pending transaction are also added to the amount"
-
-            #         return Response(data, status=status.HTTP_200_OK)
-
-
-class EventListener(APIView):
-    def post(self, request):
-        serializeEvent = EventSerializer(data=request.data)
-        if serializeEvent.is_valid():
-            check_memo = is_transaction_memo_valid(request.data.get("memo"))
-            if check_memo == True:
-                event_type = serializeEvent.validated_data.get("event_type")
-                if event_type == "merchant_staking":
-                    isTransaction_Valid.delay(
-                        transaction_hash=request.data.get("hash"),
-                        memo=request.data.get("memo"),
-                        _address=config("STAKING_ADDRESS"),
-                        _asset_code=STAKING_TOKEN,
-                        _asset_issuer=STAKING_TOKEN_ISSUER,
-                        event_transaction_type="merchant_staking",
-                    )
-                    return Response(
-                        serializeEvent.validated_data, status=status.HTTP_200_OK
-                    )
-
-                elif event_type == "user_withdrawals":
-                    isTransaction_Valid.delay(
-                        request.data.get("hash"),
-                        request.data.get("memo"),
-                        _address=STABLECOIN_ISSUER,
-                        _asset_code=STABLECOIN_CODE,
-                        _asset_issuer=STABLECOIN_ISSUER,
-                        event_transaction_type="user_withdrawals",
-                    )
-                    return Response(
-                        serializeEvent.validated_data, status=status.HTTP_200_OK
-                    )
-
-                else:
-                    pass
-            else:
-                return Response(
-                    {"error": "Invalid memo"}, status=status.HTTP_400_BAD_REQUEST
-                )
-
-        return Response(serializeEvent.errors, status.HTTP_400_BAD_REQUEST)
-
 
 # Stellar Toml
 class StellarToml(APIView):
@@ -1244,46 +1153,43 @@ def transactionStatus(requests):
             "status":"fail"
         }, status=status.HTTP_400_BAD_REQUEST)
     else:
-        #this code need to be optimised later
-        
-        if len(query_memo) > 11 and query_memo.startswith("500"):
-            transaction = getStellar_tx_fromMemo(memo=query_memo, account=STAKING_ADDRESS)
-            if len(transaction) >= 1:
-                active_transaction =transaction[0]
-                ledger_Id = active_transaction["ledger"]
-                block_tx_id = active_transaction["paging_token"]
-
-                isTransaction_Valid.delay(memo=query_memo, ledger_tx=ledger_Id, block_tx_id=block_tx_id)
-
-                return Response(msg, status=status.HTTP_200_OK)
-            else:
-                return Response({
-                "msg":"no transaction with this transactionId found yet on the protocol account, please try again later",
-                "status":"fail"
-            }, status=status.HTTP_400_BAD_REQUEST)
-        elif len(query_memo) <= 11 and query_memo.startswith("200"):
-            transaction = getStellar_tx_fromMemo(memo=query_memo, account=STABLECOIN_ISSUER)
-            
-            if len(transaction) >= 1:
-                active_transaction =transaction[0]
-                ledger_Id = active_transaction["ledger"]
-                block_tx_id = active_transaction["paging_token"]
-
-                isTransaction_Valid.delay(memo=query_memo, ledger_tx=ledger_Id, block_tx_id=block_tx_id, _address=STABLECOIN_ISSUER,  _asset_code=STABLECOIN_CODE,
-                        _asset_issuer=STABLECOIN_ISSUER)
-
-                return Response(msg, status=status.HTTP_200_OK)
-            else:
-                return Response({
-                "msg":"no transaction with this transactionId found yet on the protocol account, please try again later",
-                "status":"fail"
-            }, status=status.HTTP_400_BAD_REQUEST)
+        account = None
+        if query_memo.startswith("500"):
+            account = STAKING_ADDRESS
+        elif query_memo.startswith("200"):
+            account = STABLECOIN_ISSUER
         else:
             return Response({
-            "msg":"unknown query error, notify admin",
-            "status":"fail"
-        }, status=status.HTTP_400_BAD_REQUEST)
+                "msg":"unknown query error, notify admin",
+                "status":"fail"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
+        transaction = getStellar_tx_fromMemo(memo=query_memo, account=account)
+        if len(transaction) >= 1:
+            active_transaction =transaction[0]
+            ledger_Id = active_transaction["ledger"]
+            block_tx_id = active_transaction["paging_token"]
+
+            kwargs = {
+                "memo": query_memo,
+                "ledger_tx": ledger_Id,
+                "block_tx_id": block_tx_id
+            }
+            if account == STABLECOIN_ISSUER:
+                kwargs.update({
+                    "_address": STABLECOIN_ISSUER,
+                    "_asset_code": STABLECOIN_CODE,
+                    "_asset_issuer": STABLECOIN_ISSUER
+                })
+
+            isTransaction_Valid.delay(**kwargs)
+
+            return Response(msg, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                "msg":"no transaction with this transactionId found yet on the protocol account, please try again later",
+                "status":"fail"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
 

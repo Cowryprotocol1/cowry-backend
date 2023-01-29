@@ -70,16 +70,9 @@ def protocolAssetTotalSupply(assets:dict = {STABLECOIN_ISSUER: STABLECOIN_CODE})
 
 
 
-def queryTransactionStatus(memo:str=None, senderPubKey:str=None, amount:str=None, asset_code:str=None, asset_issuer:str=None) -> "Transaction":
-    asset = f"{asset_code}-{asset_issuer}"
-    network_ = get_stellarActive_network(network_url=config('HORIZON_URL')).lower()
-    query_url = f"https://api.stellar.expert/explorer/{network_}/payments?memo={memo}"
-    request_ = requests.get(query_url)
-    return_data = request_.json()
-    return return_data['_embedded']['records']
+
 
 def getStellar_tx_fromMemo(memo:str, account:str) -> "json":
-    print(account)
     stellar_server = horizon_server
     _tx = []
     transactions = stellar_server.transactions().for_account(account_id=account).limit(200).order(desc=True).call()
@@ -87,7 +80,6 @@ def getStellar_tx_fromMemo(memo:str, account:str) -> "json":
 
     memo_tx = [tx for tx in transaction_list if tx["memo"] == memo]
     print(memo_tx)
-    print("================")
 
     return memo_tx
     # for tx in transactions["_embedded"]["records"]:

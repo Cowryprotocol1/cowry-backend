@@ -30,7 +30,7 @@ def check_transaction_hash_if_processed(transaction_hash: str) -> bool:
     false - transaction is not found on the db
     """
     # try:
-    hash_check = TxHashTable.objects.filter(txHash=transaction_hash)
+    hash_check = TokenTable.objects.filter(stakingTx_hash=transaction_hash)
     if hash_check:
         return True
     else:
