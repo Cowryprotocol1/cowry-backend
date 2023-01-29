@@ -17,7 +17,7 @@ from Blockchains.Stellar.operations import (
     get_horizon_server,
     merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor,
 )
-from Blockchains.Stellar.utils import check_address_balance, check_stellar_address, protocolAssetTotalSupply
+from Blockchains.Stellar.utils import check_address_balance,getStellar_tx_fromMemo, check_stellar_address, protocolAssetTotalSupply, queryTransactionStatus
 from decouple import config
 from django.db import IntegrityError
 from django.http import JsonResponse, HttpResponse
@@ -216,6 +216,9 @@ class OnBoardMA(APIView):
 # update merchants transaction table each time there is a pending transaction for onramp
 # add a way to clean on processed transactions assign to a merchant from the db and free merchant balance
 # we can provide an endpoint for merchant that exceed 30min - 1hr and has not been sent
+
+
+
 
 
 class ON_RAMP_FIAT_USERS(APIView):
@@ -642,68 +645,39 @@ class MerchantDepositConfirmation(APIView):
         """
         user_key = self.request.query_params.get("public_key")
         query_type =  self.request.query_params.get("query_type")
-        if user_key and query_type == "ifp"  or user_key and query_type == "user":
-            
+        if user_key and query_type == "ifp":
+            try:
+                all_transactions = get_all_transaction_for_merchant(
+                    user_key
+                    )
+            except MerchantsTable.DoesNotExist:
+                return Response(
+                    {"error": "address not a merchant yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
+                )
+        elif user_key and query_type == "user":
             try:
                 all_transactions =get_transaction_by_pubKey(user_key)
             except TransactionsTable.DoesNotExist:
                 return Response(
                     {"error": "address has no transaction yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
                 )
-            else:
-                if all_transactions:
-                    return Response(
-                        {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User", 'status':"success"},
-                        status=status.HTTP_200_OK,
-                    )
-                else:
-                    return Response(
-                        data={"error": "No transactions found", "status":"fail"},
-                        status=status.HTTP_404_NOT_FOUND,
-                    )
         else:
             return Response(
-                data={"error": "Please provide a public key and query_type"},
-                status=status.HTTP_400_BAD_REQUEST,
+            data={"error": "Please provide a public key and query_type"},
+            status=status.HTTP_400_BAD_REQUEST,
             )
-        #     try:
-        #         merchant_details = get_merchant_by_pubKey(
-        #             merchant_pubKey=user_key
-        #         )
 
-        #     except MerchantsTable.DoesNotExist:
-        #         return Response(
-        #             {"error": "address not a merchant yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
-        #         )
-        #     else:
-        #         all_transactions = get_all_transaction_for_merchant(
-        #         merchant_details.UID
-        #             )
-        # elif user_key and query_type == "user":
-        #     try:
-        #         all_transactions =get_transaction_by_pubKey(user_key)
-        #     except TransactionsTable.DoesNotExist:
-        #         return Response(
-        #             {"error": "address has no transaction yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
-        #         )
-                
-        # else:
-        #     return Response(
-        #         data={"error": "Please provide a public key and query_type"},
-        #         status=status.HTTP_400_BAD_REQUEST,
-        #     )
-            
-        # if all_transactions:
-        #     return Response(
-        #         {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User", 'status':"success"},
-        #         status=status.HTTP_200_OK,
-        #     )
-        # else:
-        #     return Response(
-        #         data={"error": "No transactions found", "status":"fail"},
-        #         status=status.HTTP_404_NOT_FOUND,
-        #     )
-        
+        if all_transactions:
+            return Response(
+                {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User", 'status':"success"},
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                data={"error": "No transactions found", "status":"fail"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
 
     def post(self, request):
         # to do
@@ -1257,6 +1231,60 @@ def sep6Withdrawal(requests):
 def auditProtocol(requests):
     protocol_audit = protocolAudit()
     return Response({"data":protocol_audit, "protocol_token_totalSupply":protocolAssetTotalSupply()}, status=status.HTTP_200_OK)
+
+
+
+@api_view(["POST"])
+def transactionStatus(requests):
+    query_memo = requests.data.get("transactionId")
+    msg = {"msg":"we are updating your balance right away", "status":"success"}
+    if query_memo == None or query_memo == "":
+        return Response({
+            "msg":"transactionId must be provided or you have provided an transactionId",
+            "status":"fail"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        #this code need to be optimised later
+        
+        if len(query_memo) > 11 and query_memo.startswith("500"):
+            transaction = getStellar_tx_fromMemo(memo=query_memo, account=STAKING_ADDRESS)
+            if len(transaction) >= 1:
+                active_transaction =transaction[0]
+                ledger_Id = active_transaction["ledger"]
+                block_tx_id = active_transaction["paging_token"]
+
+                isTransaction_Valid.delay(memo=query_memo, ledger_tx=ledger_Id, block_tx_id=block_tx_id)
+
+                return Response(msg, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                "msg":"no transaction with this transactionId found yet on the protocol account, please try again later",
+                "status":"fail"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        elif len(query_memo) <= 11 and query_memo.startswith("200"):
+            transaction = getStellar_tx_fromMemo(memo=query_memo, account=STABLECOIN_ISSUER)
+            
+            if len(transaction) >= 1:
+                active_transaction =transaction[0]
+                ledger_Id = active_transaction["ledger"]
+                block_tx_id = active_transaction["paging_token"]
+
+                isTransaction_Valid.delay(memo=query_memo, ledger_tx=ledger_Id, block_tx_id=block_tx_id, _address=STABLECOIN_ISSUER,  _asset_code=STABLECOIN_CODE,
+                        _asset_issuer=STABLECOIN_ISSUER)
+
+                return Response(msg, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                "msg":"no transaction with this transactionId found yet on the protocol account, please try again later",
+                "status":"fail"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({
+            "msg":"unknown query error, notify admin",
+            "status":"fail"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 
 

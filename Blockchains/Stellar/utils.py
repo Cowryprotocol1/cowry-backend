@@ -1,11 +1,11 @@
 
 
-from http import server
 from stellar_sdk import Account
 from django.core.exceptions import ValidationError
 from stellar_sdk.server import Server
 from decouple import config
-from .operations import is_account_valid, STABLECOIN_CODE, ALLOWED_AND_LICENSE_P_ADDRESS, ALLOWED_TOKEN_CODE, STABLECOIN_ISSUER
+from .operations import is_account_valid, STABLECOIN_CODE, ALLOWED_AND_LICENSE_P_ADDRESS, ALLOWED_TOKEN_CODE, STABLECOIN_ISSUER, get_stellarActive_network
+import requests
 
 horizon_server = Server(horizon_url=config("HORIZON_URL"))
 
@@ -70,9 +70,41 @@ def protocolAssetTotalSupply(assets:dict = {STABLECOIN_ISSUER: STABLECOIN_CODE})
 
 
 
+def queryTransactionStatus(memo:str=None, senderPubKey:str=None, amount:str=None, asset_code:str=None, asset_issuer:str=None) -> "Transaction":
+    asset = f"{asset_code}-{asset_issuer}"
+    network_ = get_stellarActive_network(network_url=config('HORIZON_URL')).lower()
+    query_url = f"https://api.stellar.expert/explorer/{network_}/payments?memo={memo}"
+    request_ = requests.get(query_url)
+    return_data = request_.json()
+    return return_data['_embedded']['records']
 
+def getStellar_tx_fromMemo(memo:str, account:str) -> "json":
+    print(account)
+    stellar_server = horizon_server
+    _tx = []
+    transactions = stellar_server.transactions().for_account(account_id=account).limit(200).order(desc=True).call()
+    transaction_list = [tx for tx in transactions["_embedded"]["records"] if tx["memo_type"] != "none"]
 
+    memo_tx = [tx for tx in transaction_list if tx["memo"] == memo]
+    print(memo_tx)
+    print("================")
 
+    return memo_tx
+    # for tx in transactions["_embedded"]["records"]:
+
+    #     try:
+    #         if tx["type"] == "payment" and tx["memo"] == memo:
+    #             print(tx)
+    #             print("================")
+    #             _tx.append(tx)
+    #         else:
+    #             pass
+    #     except KeyError:
+    #         pass
+    # print(_tx)
+    # return _tx
+            
+# {"transactionId":"20084492105"}
 
 
 
