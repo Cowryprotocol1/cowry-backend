@@ -8,8 +8,7 @@ from .models import (
     XdrGeneratedTransaction,
 )
 from decouple import config
-from django.db.models import Sum, F
-
+from django.db.models import Sum, F, Q
 
 
 QuerySet = TypeVar("QuerySet")
@@ -31,7 +30,7 @@ def check_transaction_hash_if_processed(transaction_hash: str) -> bool:
     false - transaction is not found on the db
     """
     # try:
-    hash_check = TxHashTable.objects.filter(txHash=transaction_hash)
+    hash_check = TokenTable.objects.filter(stakingTx_hash=transaction_hash)
     if hash_check:
         return True
     else:
@@ -66,21 +65,31 @@ def add_and_update_transaction_hash(_hash: str, merchant_id: str) -> bool:
 
 def get_merchant_by_pubKey(merchant_pubKey: str) -> MerchantsTable:
     merchant = MerchantsTable.objects.all().filter(blockchainAddress=merchant_pubKey)
-    _value_merchant = merchant.values(stakedTokenAmount=F("tokentable__stakedTokenAmount"), licenseTokenAmount=F("tokentable__licenseTokenAmount"), account_id=F("UID"),
-    stakedTokenExchangeRate=F("tokentable__stakedTokenExchangeRate"),unclear_bal=F("tokentable__unclear_bal"), allowedTokenAmount=F("tokentable__allowedTokenAmount"))
+    _value_merchant = merchant.values(
+        stakedTokenAmount=F("tokentable__stakedTokenAmount"),
+        licenseTokenAmount=F("tokentable__licenseTokenAmount"),
+        account_id=F("UID"),
+        stakedTokenExchangeRate=F("tokentable__stakedTokenExchangeRate"),
+        unclear_bal=F("tokentable__unclear_bal"),
+        allowedTokenAmount=F("tokentable__allowedTokenAmount"),
+    )
     annotate_qs = _value_merchant.annotate(
-        ifp_acct_name= F("bankName"),
-        ifp_email_addr= F("email"),
-        ifp_acct_number= F("bankAccount"),
-        ifp_phone_name= F("phoneNumber"),
-        ifp_block_addr= F("blockchainAddress"),
-        ifp_process_status = F("transaction_processing_status")
+        ifp_acct_name=F("bankName"),
+        ifp_email_addr=F("email"),
+        ifp_acct_number=F("bankAccount"),
+        ifp_phone_name=F("phoneNumber"),
+        ifp_block_addr=F("blockchainAddress"),
+        ifp_process_status=F("transaction_processing_status"),
     )
     return annotate_qs[0]
 
 
 def update_merchant_by_allowedLicenseAmount(
-    merchant_id: str, allowedLicenseAmt: int, stakedAmt: int, exchangeRate: int, stakingHash:str
+    merchant_id: str,
+    allowedLicenseAmt: int,
+    stakedAmt: int,
+    exchangeRate: int,
+    stakingHash: str,
 ) -> bool:
     # update allowed and license token balance on minting
     try:
@@ -142,19 +151,25 @@ def get_pending_transactions(merchant: str) -> QuerySet:
         merchant = merchant_tx.filter(transaction_status="pending")
         return merchant
 
-def get_all_transaction_for_merchant(merchant:object) -> QuerySet:
-    merchant_obj = MerchantsTable.objects.get(UID=merchant)
-    transaction_list = TransactionsTable.objects.filter(merchant=merchant_obj).order_by("-created_at") #using the - before the colum name means descending order
+
+def get_all_transaction_for_merchant(merchant_pub_key: object) -> QuerySet:
+    merchant_obj = MerchantsTable.objects.get(blockchainAddress=merchant_pub_key)
+    transaction_list = TransactionsTable.objects.filter(
+        Q(merchant=merchant_obj) | Q(users_address=merchant_pub_key)
+    ).order_by(
+        "-created_at"
+    )  # using the - before the colum name means descending order
     return transaction_list
+
 
 def get_transaction_by_pubKey(pubKey: str) -> QuerySet:
     """
     Used to get transaction by public key
     """
-    transaction_ = TransactionsTable.objects.filter(users_address=pubKey).order_by('-created_at')
+    transaction_ = TransactionsTable.objects.filter(users_address=pubKey).order_by(
+        "-created_at"
+    )
     return transaction_
-
-
 
 
 def update_pending_transaction_model(
@@ -162,7 +177,7 @@ def update_pending_transaction_model(
     transaction_amt: str,
     transaction_type: str,
     narration: str,
-    transaction_status:str,
+    transaction_status: str,
     transaction_hash=None,
     transaction_memo=None,
     user_block_address=None,
@@ -180,7 +195,7 @@ def update_pending_transaction_model(
             transaction_type=transaction_type,
             transaction_amount=transaction_amt,
             transaction_narration=narration,
-            transaction_status = "pending"
+            transaction_status="pending",
         )
         a1.save()
         a1.merchant.add(merchant_obj)
@@ -276,19 +291,21 @@ def check_xdr_if_already_exist(xdr: str) -> bool:
     else:
         return False
 
-def update_transaction_status(transaction_id:str, status:str) -> bool:
+
+def update_transaction_status(transaction_id: str, status: str) -> bool:
     try:
         transaction = TransactionsTable.objects.get(id=transaction_id)
         transaction.transaction_status = status
         transaction.save()
     except Exception as unknownError:
-        #notify admin
+        # notify admin
         print(unknownError)
         return False
     else:
         return True
 
     pass
+
 
 def remove_transaction_from_merchants_model(
     merchant: str, transaction_id: str, amount: float
@@ -338,32 +355,30 @@ def update_cleared_uncleared_bal(merchant: object, status: str, amount: float):
         merchant_obj.save()
 
 
-
 def delete_merchant(merchant: str) -> bool:
     merchant_obj = MerchantsTable.objects.get(UID=merchant)
     merchant_obj.delete()
     return True
 
 
-
-
 def protocolAudit():
     all_merchants = TokenTable.objects.all()
-    _edited = all_merchants.values(ifp_blockchain_addr=F("merchant_id__blockchainAddress")).annotate(
-        staked_token_hash = F('stakingTx_hash'),
-        total_staked_usdc = F('stakedTokenAmount'),
-        exchange_rate = F('stakedTokenExchangeRate'),
-        total_mint_right = F('licenseTokenAmount'),
-        pending_unclear_amt = F('unclear_bal'),
-        fiat_in_acct = F('total_mint_right') - (F('allowedTokenAmount') + F('unclear_bal')),
-        allowed_token_left =  F("total_mint_right") - F('pending_unclear_amt') + F('fiat_in_acct'),
+    _edited = all_merchants.values(
+        ifp_blockchain_addr=F("merchant_id__blockchainAddress")
+    ).annotate(
+        staked_token_hash=F("stakingTx_hash"),
+        total_staked_usdc=F("stakedTokenAmount"),
+        exchange_rate=F("stakedTokenExchangeRate"),
+        total_mint_right=F("licenseTokenAmount"),
+        pending_unclear_amt=F("unclear_bal"),
+        fiat_in_acct=F("total_mint_right")
+        - (F("allowedTokenAmount") + F("unclear_bal")),
+        allowed_token_left=F("total_mint_right")
+        - F("pending_unclear_amt")
+        + F("fiat_in_acct"),
     )
 
     return _edited
-
-
-
-
 
 
 # adc = protocolAudit()

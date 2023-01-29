@@ -66,29 +66,31 @@ def amount_to_naira(amount):
 # to be used inside model before saving
 @shared_task
 def isTransaction_Valid(
-    transaction_hash: str,
-    memo: str,
+    memo: str =None,
+    ledger_tx:str =None,
+    block_tx_id:str =None,
     _address=STAKING_ADDRESS,
     _asset_code=STAKING_TOKEN_CODE,
     _asset_issuer=STAKING_TOKEN_ISSUER,
-    event_transaction_type="merchant_staking",
 ) -> bool:
     # check transaction status and return needed data using
     # Check transaction hash has not been processed before
     server = get_horizon_server()
 
     try:
-        tx = server.payments().for_transaction(transaction_hash).call()
+        tx = server.payments().for_ledger(ledger_tx).cursor(block_tx_id).call()
     except Exception as e:
         print(e)
         pass
     else:
+        print("celery has picked up tx")
 
         amt = round(float(tx["_embedded"]["records"][0]["amount"]), 7)
         recipient_add = tx["_embedded"]["records"][0]["to"]
         sender = tx["_embedded"]["records"][0]["from"]
         asset_code = tx["_embedded"]["records"][0]["asset_code"]
         asset_issuer = tx["_embedded"]["records"][0]["asset_issuer"]
+        transaction_hash =  tx["_embedded"]["records"][0]['transaction_hash']
         # print("addresses", recipient_add, _address)
         # print("codes", asset_code, _asset_code)
         # print("issuers", asset_issuer, _asset_issuer)
@@ -100,12 +102,13 @@ def isTransaction_Valid(
         ):
             hash_check = check_transaction_hash_if_processed(transaction_hash)
             # If above conditions are met, then the transaction is valid and we have not processed it before
+            print(hash_check)
             if hash_check == True:
                 print("Hash already processed")
                 pass
             elif hash_check == False:
                 try:
-                    if event_transaction_type == "merchant_staking":
+                    if recipient_add == STAKING_ADDRESS:
                         print("got inside")
                         try:
                             [mint_amt, price] = amount_to_naira(amt)
@@ -128,40 +131,7 @@ def isTransaction_Valid(
                             print("this is a critical error")
                             pass
 
-                        # update_hash = add_and_update_transaction_hash(
-                        #     transaction_hash, memo
-                        # )  # add transaction hash to db and update the merchant txhash table
-                        # #    Determin how much to mint using the value Naira to USD
-                        # print("update_hash")
-                        # print(update_hash)
-                        # if update_hash == True:
-                            # try:
-                            #     # determine the amount of allowed and license token to mint to the merchant
-                            #     [mint_amt, price] = amount_to_naira(amt)
-                            #     update_balance_details = (
-                            #         update_merchant_by_allowedLicenseAmount(
-                            #             memo, mint_amt, amt, price
-                            #         )
-                            #     )
-                            #     if update_balance_details == True:
-                            #         Mint_Token(
-                            #             sender, round(float(mint_amt), 7), str(memo)
-                            #         )
-                            #     else:
-                            #         print("Transaction failed")
-                            #         # Transaction failed, send notification to admin group
-                            # except Exception as e:
-                            #     # Critical error, need to send to admin
-                            #     print(e)
-                            #     print("this is a critical error")
-                                # pass
-                        # elif update_hash == False:
-                        #     print(
-                        #         "Transaction hash already processed or merchant with the memo not found"
-                        #     )
-                        #     pass
-
-                    elif event_transaction_type == "user_withdrawals":
+                    elif recipient_add == STABLECOIN_ISSUER:
                         try:
                             tx_obj = TransactionsTable.objects.get(id=memo)
                         except TransactionsTable.DoesNotExist:
@@ -174,7 +144,6 @@ def isTransaction_Valid(
                             tx_obj.transaction_amount = amt
                             tx_obj.save()
                             
-                            # if amt >= float(tx_obj.transaction_amount):
                             merchants_list = TokenTableSerializer(
                                 all_merchant_token_bal(), many=True
                             )
@@ -220,16 +189,16 @@ def isTransaction_Valid(
 
                     else:
                         logging.info(
-                            f"Transaction type of {event_transaction_type} not supported"
+                            f"Transaction recipient address unknown"
                         )
                 except Exception as e:
                     # notify_admin(e)
                     print(e)
                     pass
         else:
-            print("addresses", recipient_add, _address)
-            print("codes", asset_code, _asset_code)
-            print("issuers", asset_issuer, _asset_issuer)
+            # print("addresses", recipient_add, _address)
+            # print("codes", asset_code, _asset_code)
+            # print("issuers", asset_issuer, _asset_issuer)
             print("this is the pass")
             pass
 

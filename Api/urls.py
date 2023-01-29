@@ -7,7 +7,6 @@ from .views import *
 urlpatterns = [
     path('', IndexPage.as_view(), name='index'),
     path('onboard', OnBoardMA.as_view(), name='onboard'), #Tested
-    path('listener', EventListener.as_view(), name='Listener'), #tested
     path('deposit', ON_RAMP_FIAT_USERS.as_view(), name='deposit'), #tested
     path("merchants",
         MerchantDepositConfirmation.as_view(), name="merchants"), #tested
@@ -20,7 +19,8 @@ urlpatterns = [
     path("sep6/info", sepInfo, name="sep6Info"), #tested
     path("sep6/withdraw", sep6Withdrawal, name="sep6Withdraw"), #tested
     path("submit_xdr", SubmitAnXdr.as_view(), name="submitxdr"),
-    path("audit_protocol", auditProtocol, name="audit") #tested
+    path("audit_protocol", auditProtocol, name="audit"), #tested
+    path("transactionStatus", transactionStatus, name="transactionStatus") #tested
     # path("canceltransaction", TransactionExpire.as_view(), name="TransactionExpire")
     
 
