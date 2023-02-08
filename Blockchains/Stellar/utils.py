@@ -82,21 +82,7 @@ def getStellar_tx_fromMemo(memo:str, account:str) -> "json":
     print(memo_tx)
 
     return memo_tx
-    # for tx in transactions["_embedded"]["records"]:
 
-    #     try:
-    #         if tx["type"] == "payment" and tx["memo"] == memo:
-    #             print(tx)
-    #             print("================")
-    #             _tx.append(tx)
-    #         else:
-    #             pass
-    #     except KeyError:
-    #         pass
-    # print(_tx)
-    # return _tx
-            
-# {"transactionId":"20084492105"}
 
 
 
