@@ -164,6 +164,7 @@ class OnBoardMA(APIView):
             _data["bankAccount"] = request.data.get("bankAccount")
             _data["phoneNumber"] = request.data.get("phoneNumber")
             _data["UID"] = uidGenerator()
+            # _data ["nameOnAcct"] = request.data.get("nameOnAcct")
 
             serializeMA = MerchantsTableSerializer(data=_data)
             if serializeMA.is_valid():
@@ -244,12 +245,12 @@ class ON_RAMP_FIAT_USERS(APIView):
                 is_asset_trusted = is_Asset_trusted(blockchainAddress, 1, STABLECOIN_ISSUER)
 
                 if is_asset_trusted[0] == True:
-                    merchants_list = TokenTableSerializer(
-                        all_merchant_token_bal(), many=True
-                    )
+                    # merchants_list = TokenTableSerializer(
+                    #     all_merchant_token_bal(), many=True
+                    # )
 
                     MA_selected = merchants_to_process_transaction(
-                        merchants_list.data, amount, bankType
+                        blockchainAddress, amount, bankType
                     )
                     # add filtering process for deposit and check for multiple deposit option
                     if MA_selected:
@@ -648,6 +649,7 @@ class MerchantDepositConfirmation(APIView):
                 all_transactions = get_all_transaction_for_merchant(
                     user_key
                     )
+                print(all_transactions)
             except MerchantsTable.DoesNotExist:
                 return Response(
                     {"error": "address not a merchant yet", 'status':"fail"}, status=status.HTTP_404_NOT_FOUND
@@ -947,6 +949,7 @@ class AccountDetails(APIView):
                 data["pending_transaction"] = merchant["unclear_bal"]
                 data["total_fiat_held_in_bank_acct"] = fiat_in_bank
                 data["allowed_token"] = float(merchant["licenseTokenAmount"]) - (float(merchant["unclear_bal"]) + float(fiat_in_bank))
+                data["image"] = f"https://id.lobstr.co/{pub_key}.png"
                 data["status"] = "successful"
                 merchant.update(data)
 
@@ -999,6 +1002,63 @@ class SubmitAnXdr(APIView):
         else:
             return Response(xdr_object.errors, status.HTTP_400_BAD_REQUEST)
 
+@api_view(["GET"])
+def auditProtocol(requests):
+    protocol_audit = protocolAudit()
+    return Response({"data":protocol_audit, "protocol_token_totalSupply":protocolAssetTotalSupply()}, status=status.HTTP_200_OK)
+
+
+
+@api_view(["POST"])
+def transactionStatus(requests):
+    query_memo = requests.data.get("transactionId")
+    msg = {"msg":"we are updating your balance right away", "status":"success"}
+    if query_memo == None or query_memo == "":
+        return Response({
+            "msg":"transactionId must be provided or you have provided an transactionId",
+            "status":"fail"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        account = None
+        if query_memo.startswith("500"):
+            account = STAKING_ADDRESS
+        elif query_memo.startswith("200"):
+            account = STABLECOIN_ISSUER
+        else:
+            return Response({
+                "msg":"unknown query error, notify admin",
+                "status":"fail"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        transaction = getStellar_tx_fromMemo(memo=query_memo, account=account)
+        if len(transaction) >= 1:
+            active_transaction =transaction[0]
+            ledger_Id = active_transaction["ledger"]
+            block_tx_id = active_transaction["paging_token"]
+
+            kwargs = {
+                "memo": query_memo,
+                "ledger_tx": ledger_Id,
+                "block_tx_id": block_tx_id
+            }
+            if account == STABLECOIN_ISSUER:
+                kwargs.update({
+                    "_address": STABLECOIN_ISSUER,
+                    "_asset_code": STABLECOIN_CODE,
+                    "_asset_issuer": STABLECOIN_ISSUER
+                })
+
+            isTransaction_Valid.delay(**kwargs)
+
+            return Response(msg, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                "msg":"no transaction with this transactionId found yet on the protocol account, please try again later",
+                "status":"fail"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 @api_view(["GET"])
 def Sep6Deposit(requests):
@@ -1013,7 +1073,7 @@ def Sep6Deposit(requests):
         )
         if is_asset_trusted[0] == True:
 
-            merchants_list = TokenTableSerializer(all_merchant_token_bal(), many=True)
+            # merchants_list = TokenTableSerializer(all_merchant_token_bal(), many=True)
             amount = sep6Data.validated_data["amount"]
             account = sep6Data.validated_data["account"]
             transaction_narration = uidGenerator(
@@ -1021,7 +1081,7 @@ def Sep6Deposit(requests):
             )  # This should be changed to random wordlist
 
             MA_selected = merchants_to_process_transaction(
-                merchants_list.data, amount, bank=None
+                account, amount, bank=None
             )
             if MA_selected:
                 try:
@@ -1136,63 +1196,12 @@ def sep6Withdrawal(requests):
 
 
 
+
 @api_view(["GET"])
-def auditProtocol(requests):
-    protocol_audit = protocolAudit()
-    return Response({"data":protocol_audit, "protocol_token_totalSupply":protocolAssetTotalSupply()}, status=status.HTTP_200_OK)
-
-
-
-@api_view(["POST"])
-def transactionStatus(requests):
-    query_memo = requests.data.get("transactionId")
-    msg = {"msg":"we are updating your balance right away", "status":"success"}
-    if query_memo == None or query_memo == "":
-        return Response({
-            "msg":"transactionId must be provided or you have provided an transactionId",
-            "status":"fail"
-        }, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        account = None
-        if query_memo.startswith("500"):
-            account = STAKING_ADDRESS
-        elif query_memo.startswith("200"):
-            account = STABLECOIN_ISSUER
-        else:
-            return Response({
-                "msg":"unknown query error, notify admin",
-                "status":"fail"
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        transaction = getStellar_tx_fromMemo(memo=query_memo, account=account)
-        if len(transaction) >= 1:
-            active_transaction =transaction[0]
-            ledger_Id = active_transaction["ledger"]
-            block_tx_id = active_transaction["paging_token"]
-
-            kwargs = {
-                "memo": query_memo,
-                "ledger_tx": ledger_Id,
-                "block_tx_id": block_tx_id
-            }
-            if account == STABLECOIN_ISSUER:
-                kwargs.update({
-                    "_address": STABLECOIN_ISSUER,
-                    "_asset_code": STABLECOIN_CODE,
-                    "_asset_issuer": STABLECOIN_ISSUER
-                })
-
-            isTransaction_Valid.delay(**kwargs)
-
-            return Response(msg, status=status.HTTP_200_OK)
-        else:
-            return Response({
-                "msg":"no transaction with this transactionId found yet on the protocol account, please try again later",
-                "status":"fail"
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-
-
+def sep24Withdrawal(request):
+    # get sep10 token
+    data_ = request.data
+    print(data_)
 
 # class TransactionExpire(APIView):
 #     """

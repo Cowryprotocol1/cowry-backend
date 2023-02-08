@@ -109,10 +109,15 @@ def update_merchant_by_allowedLicenseAmount(
         # notify admin
         return False
 
+# old function
+# def all_merchant_token_bal() -> list:
+#     merchants = TokenTable.objects.all().prefetch_related("merchant")
+#     return merchants
 
-def all_merchant_token_bal() -> list:
-    merchants = TokenTable.objects.all().prefetch_related("merchant")
+def all_merchant_token_bal(last_merchant:str, blockchainaddress:str) -> list:
+    merchants = TokenTable.objects.exclude(merchant=last_merchant).exclude(merchant__blockchainAddress=blockchainaddress)
     return merchants
+
 
 
 def get_all_merchant_object() -> list:

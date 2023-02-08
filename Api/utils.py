@@ -24,9 +24,10 @@ from modelApp.utils import (
     get_transaction_By_Id,
     update_merchant_by_allowedLicenseAmount,
 )
-from .serializers import TokenTableSerializer
+from .serializers import TokenTableSerializer, TransactionSerializer
 from modelApp.models import TransactionsTable
 from modelApp.utils import update_cleared_uncleared_bal
+
 
 STAKING_ADDRESS = config("STAKING_ADDRESS")
 STAKING_TOKEN_CODE = config("STAKING_TOKEN_CODE")
@@ -144,11 +145,11 @@ def isTransaction_Valid(
                             tx_obj.transaction_amount = amt
                             tx_obj.save()
                             
-                            merchants_list = TokenTableSerializer(
-                                all_merchant_token_bal(), many=True
-                            )
+                            # merchants_list = TokenTableSerializer(
+                            #     all_merchant_token_bal(), many=True
+                            # )
                             selected_ma = merchants_to_process_transaction(
-                                merchants_list.data,
+                                sender,
                                 tx_amount=amt,
                                 bank=None,
                                 transaction_type="user_withdrawals",
@@ -204,12 +205,55 @@ def isTransaction_Valid(
 
 
 # def is_user_withdrawal_memo_valid(hash:str, tx_memo):
+# def merchants_to_process_transaction(
+#     merchants: List, tx_amount: int, bank=None, transaction_type="deposit"
+# ) -> str:
+#     merchant_list = []
+#     if transaction_type == "deposit":
+#         for merchant in merchants:
+#             # Getting list of merchants to process transaction
+#             if merchant["allowedTokenAmount"] >= tx_amount:
+#                 merchant_list.append(merchant)
+#             else:
+#                 pass
+#     elif transaction_type == "user_withdrawals":
+#         for merchant in merchants:
+
+#             # if license token - allowed token > amount to withdraw
+
+#             if (
+#                 merchant["licenseTokenAmount"] - merchant["allowedTokenAmount"]
+#             ) >= tx_amount:
+#                 merchant_list.append(merchant)
+#             # Getting list of merchants to process transaction
+#             else:
+#                 pass
+
+#     if len(merchant_list) > 0:
+#         adc = random.choice(merchant_list)
+#         return adc
+#     else:
+#         return False
+
+
+
 def merchants_to_process_transaction(
-    merchants: List, tx_amount: int, bank=None, transaction_type="deposit"
+    recipient_block:str, tx_amount: int, bank=None, transaction_type="deposit"
 ) -> str:
     merchant_list = []
+    #Get last processed Transaction
+    transactions = TransactionsTable.objects.all().order_by("created_at")
+    tx_serializer = TransactionSerializer(transactions, many=True)
+    last_tx = tx_serializer.data[-1]
+    # filter list of merchant, using the last transaction and also who is send the present request
+    merchants = all_merchant_token_bal(last_tx["merchant"][0], blockchainaddress=recipient_block)
+    #serializer the return value
+
+    all_merchant = TokenTableSerializer(merchants, many=True).data
+
     if transaction_type == "deposit":
-        for merchant in merchants:
+
+        for merchant in all_merchant:
             # Getting list of merchants to process transaction
             if merchant["allowedTokenAmount"] >= tx_amount:
                 merchant_list.append(merchant)
@@ -233,6 +277,7 @@ def merchants_to_process_transaction(
         return adc
     else:
         return False
+    
 
 
 def Notifications(recipient_email, subject, message):
