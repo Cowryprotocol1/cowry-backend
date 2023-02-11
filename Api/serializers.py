@@ -1,6 +1,6 @@
 # from Api.utils import amount_to_naira
 from modelApp.models import MerchantsTable, TokenTable, TxHashTable, TransactionsTable, XdrGeneratedTransaction
-from modelApp.utils import all_merchant_token_bal
+
 from rest_framework import serializers
 from Blockchains.Stellar.utils import check_stellar_address, check__asset_code_For_stable
 from django.core.exceptions import ValidationError

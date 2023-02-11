@@ -74,10 +74,10 @@ def get_merchant_by_pubKey(merchant_pubKey: str) -> MerchantsTable:
         allowedTokenAmount=F("tokentable__allowedTokenAmount"),
     )
     annotate_qs = _value_merchant.annotate(
-        ifp_acct_name=F("bankName"),
-        ifp_email_addr=F("email"),
-        ifp_acct_number=F("bankAccount"),
-        ifp_phone_name=F("phoneNumber"),
+        bank_name=F("bankName"),
+        email_addr=F("email"),
+        acct_number=F("bankAccount"),
+        phone_name=F("phoneNumber"),
         ifp_block_addr=F("blockchainAddress"),
         ifp_process_status=F("transaction_processing_status"),
     )
@@ -109,10 +109,15 @@ def update_merchant_by_allowedLicenseAmount(
         # notify admin
         return False
 
+# old function
+# def all_merchant_token_bal() -> list:
+#     merchants = TokenTable.objects.all().prefetch_related("merchant")
+#     return merchants
 
-def all_merchant_token_bal() -> list:
-    merchants = TokenTable.objects.all().prefetch_related("merchant")
+def all_merchant_token_bal(last_merchant:str, blockchainaddress:str) -> list:
+    merchants = TokenTable.objects.exclude(merchant=last_merchant).exclude(merchant__blockchainAddress=blockchainaddress)
     return merchants
+
 
 
 def get_all_merchant_object() -> list:
