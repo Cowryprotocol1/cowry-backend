@@ -26,6 +26,13 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DJANGO_DEBUG')
 
+
+# ==============================
+#Poloaris settings
+
+# ACTIVE_SEPS=['sep-1', 'sep-10', 'sep-24']
+FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
+
 ALLOWED_HOSTS = ['*']
 # ALLOWED_HOSTS = ['localhost:3000', 'cowry-backend.herokuapp.com', '127.0.0.1', 'testserver', '.cowryprotocol.io', 'cowry-frontend.herokuapp.com']
 
@@ -62,6 +69,7 @@ INSTALLED_APPS = [
     'modelApp',
     'Api',
     'events',
+    'polaris',
     
 ]
 
@@ -77,10 +85,12 @@ INSTALLED_APPS = [
 
 
 MIDDLEWARE = [
-    'stablecoin.cors.CorsMiddleware',
+    # 'stablecoin.cors.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'polaris.middleware.TimezoneMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
