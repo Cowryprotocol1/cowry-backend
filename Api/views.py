@@ -242,17 +242,26 @@ class ON_RAMP_FIAT_USERS(APIView):
 
             if check_data.is_valid():
                 # check if the address has a trustline for the NGN asset
-                is_asset_trusted = is_Asset_trusted(blockchainAddress, 1, STABLECOIN_ISSUER)
+                is_asset_trusted = is_Asset_trusted( address =blockchainAddress, asset_number=1, issuerAddress=STABLECOIN_ISSUER)
 
                 if is_asset_trusted[0] == True:
                     # merchants_list = TokenTableSerializer(
                     #     all_merchant_token_bal(), many=True
                     # )
-
-                    MA_selected = merchants_to_process_transaction(
-                        blockchainAddress, amount, bankType
-                    )
+                    try:
+                        MA_selected = merchants_to_process_transaction(
+                            blockchainAddress, amount, bankType
+                        )
+                    except Exception as e:
+                        print(e)
+                        return Response(
+                                {
+                                    "error": "this is an error from our end, the admin will be notified soon"
+                                },
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
                     # add filtering process for deposit and check for multiple deposit option
+                    print(MA_selected)
                     if MA_selected:
                         try:
                             update_pending_transaction_model(
@@ -317,7 +326,7 @@ class ON_RAMP_FIAT_USERS(APIView):
                     assets = [{"code": STABLECOIN_CODE, "issuer": STABLECOIN_ISSUER}]
                     return Response(
                         {
-                            "error": f"your address must add trustline to the following assets and also have enough balance for {STAKING_TOKEN}",
+                            "error": f"your address must add trustline to the following asset(s)",
                             "assets": assets,
                         },
                         status=status.HTTP_400_BAD_REQUEST,
@@ -531,9 +540,10 @@ class OFF_BOARDING_MA(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
             except Exception as e:
+                # mostly with passing in an incorrect combination of query
                 print(e)
                 return Response(
-                    {"error": "something went wrong"},
+                    {"error": "You are passing in an incorrect combination of input, check and try again"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             else:
@@ -546,79 +556,85 @@ class OFF_BOARDING_MA(APIView):
                 #         status=status.HTTP_404_NOT_FOUND,
                 #     )
                 # else:
-                if float(merchant_object["licenseTokenAmount"]) > 0:
-                    if (
-                        float(merchant_object["licenseTokenAmount"])
-                        > float(merchant_object["allowedTokenAmount"])
-                        and merchant_object['ifp_block_addr'] == merchant_PubKey
-                    ):
-                        response = {
-                            "error": "You can't perform this transaction yet, you are holding some fiat in your account",
-                            "outstanding_fiat": float(merchant_object["licenseTokenAmount"])
-                            - float(merchant_object["allowedTokenAmount"]),
-                        }
-                        return Response(
-                            response, status=status.HTTP_400_BAD_REQUEST
-                        )
-                    else:
-                        print(
-                            "Need to handle removing merchant before submission of transaction"
-                        )
-                        remove_merchant = delete_merchant(merchant_object["account_id"])
-                        if remove_merchant == True:
-                            try:
-                                raw_xdr = OffBoard_Merchant_with_Burn(
-                                    recipient_pub_key=merchant_PubKey,
-                                    amount=round(
-                                        float(merchant_object["licenseTokenAmount"]), 7
-                                    ),
-                                    memo=merchant_Id,
-                                    exchange_rate=round(
-                                        float(
-                                            merchant_object["stakedTokenExchangeRate"]
-                                        ),
-                                        7,
-                                    ),
-                                    total_staked_amt=round(
-                                        float(merchant_object["stakedTokenAmount"]), 7
-                                    ),
-                                )
-                            except Exception as e:
-                                print(e)
-                                return Response(
-                                    {"error": "something went wrong"},
-                                    status=status.HTTP_400_BAD_REQUEST,
-                                )
-                            else:
-                                logging.info(
-                                    "We need to handle situations were merchant failed to submit the transaction, maybe by moving the merchant to a state that is  not accessible by the api"
-                                )
-                                MerchantsTable.objects.filter(
-                                    UID=merchant_Id
-                                ).delete()
-                                _message = {}
-                                _message[
-                                    "message"
-                                ] = "Please sign and submit the XDR below within 30min to complete the transaction"
-                                _message["raw_xdr"] = raw_xdr
-                                logging.info(
-                                    f"Offboarding merchant {merchant_Id}, need to add interest calculation to the amount the merchant get"
-                                )
+                if merchant_object["account_id"] != merchant_Id:
+                    return Response({
+                        "status":"error",
+                        "msg":"invalid account_id"
+                    }, status=status.HTTP_400_BAD_REQUEST) 
+                else:
+                    if float(merchant_object["licenseTokenAmount"]) > 0:
+                        if (
+                            float(merchant_object["licenseTokenAmount"])
+                            > float(merchant_object["allowedTokenAmount"])
+                            and merchant_object['ifp_block_addr'] == merchant_PubKey
+                        ):
+                            response = {
+                                "error": "You can't perform this transaction yet, you are holding some fiat in your account",
+                                "outstanding_fiat": float(merchant_object["licenseTokenAmount"])
+                                - float(merchant_object["allowedTokenAmount"]),
+                            }
                             return Response(
-                                data=_message, status=status.HTTP_200_OK
+                                response, status=status.HTTP_400_BAD_REQUEST
                             )
                         else:
-                            return Response(
-                                {"error": "Something went wrong"},
-                                status=status.HTTP_400_BAD_REQUEST,
+                            print(
+                                "Need to handle removing merchant before submission of transaction"
                             )
-                elif token_balance.licenseTokenAmount == 0:
-                    return Response(
-                        data={
-                            "error": f"Merchant with public key {merchant_PubKey} is not fully register yet and so can't offBoard itself, please stake to the protocol address and try again"
-                        },
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
+                            remove_merchant = delete_merchant(merchant_object["account_id"])
+                            if remove_merchant == True:
+                                try:
+                                    raw_xdr = OffBoard_Merchant_with_Burn(
+                                        recipient_pub_key=merchant_PubKey,
+                                        amount=round(
+                                            float(merchant_object["licenseTokenAmount"]), 7
+                                        ),
+                                        memo=merchant_Id,
+                                        exchange_rate=round(
+                                            float(
+                                                merchant_object["stakedTokenExchangeRate"]
+                                            ),
+                                            7,
+                                        ),
+                                        total_staked_amt=round(
+                                            float(merchant_object["stakedTokenAmount"]), 7
+                                        ),
+                                    )
+                                except Exception as e:
+                                    print(e)
+                                    return Response(
+                                        {"error": "something went wrong"},
+                                        status=status.HTTP_400_BAD_REQUEST,
+                                    )
+                                else:
+                                    logging.info(
+                                        "We need to handle situations were merchant failed to submit the transaction, maybe by moving the merchant to a state that is  not accessible by the api"
+                                    )
+                                    MerchantsTable.objects.filter(
+                                        UID=merchant_Id
+                                    ).delete()
+                                    _message = {}
+                                    _message[
+                                        "message"
+                                    ] = "Please sign and submit the XDR below within 30min to complete the transaction"
+                                    _message["raw_xdr"] = raw_xdr
+                                    logging.info(
+                                        f"Offboarding merchant {merchant_Id}, need to add interest calculation to the amount the merchant get"
+                                    )
+                                return Response(
+                                    data=_message, status=status.HTTP_200_OK
+                                )
+                            else:
+                                return Response(
+                                    {"error": "Something went wrong"},
+                                    status=status.HTTP_400_BAD_REQUEST,
+                                )
+                    elif float(merchant_object["licenseTokenAmount"])  <= 0:
+                        return Response(
+                            data={
+                                "error": f"Merchant with public key {merchant_PubKey} is not fully register yet and so can't offBoard itself, please stake to the protocol address and try again"
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
 
                 return Response(
                     {"error": "Merchant has no license token"},
@@ -725,7 +741,7 @@ class MerchantDepositConfirmation(APIView):
                         and transaction.transaction_type == "deposit"
                         and merchant_pubKey == merchant_table.blockchainAddress
                     ):
-                        # in a deposit transaction, this only rectify the unclear_bal, allowToken will be untouch
+                        # in a deposit transaction, this only rectify the unclear_bal, allowToken will be untouched
                         # Allowed token will be updated onchain through the transaction
                         depositor_address = transaction.users_address
                         amount_deposit = transaction.transaction_amount
@@ -1241,7 +1257,6 @@ def sep24Withdrawal(request):
 #                 # release IFP pending balance back to their account
 #                 # when transaction is cancelled, the amount for the transaction needs to be added back to the IFP allowedToken balance
 #                 # adc = update_transaction_status(transaction_id=transaction_id, status='cancel')
-#                 # update_cleared_uncleared_bal()
 #                 print(transaction.merchantstable_id)
 #                 _data ={"ok":"ok"}
 #                 return Response(_data, status=status.HTTP_200_OK)

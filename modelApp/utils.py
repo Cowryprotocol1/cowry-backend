@@ -110,9 +110,9 @@ def update_merchant_by_allowedLicenseAmount(
         return False
 
 # old function
-# def all_merchant_token_bal() -> list:
-#     merchants = TokenTable.objects.all().prefetch_related("merchant")
-#     return merchants
+def all_merchant_token_bal_no_filter() -> list:
+    merchants = TokenTable.objects.all().prefetch_related("merchant")
+    return merchants
 
 def all_merchant_token_bal(last_merchant:str, blockchainaddress:str) -> list:
     merchants = TokenTable.objects.exclude(merchant=last_merchant).exclude(merchant__blockchainAddress=blockchainaddress)
@@ -130,7 +130,7 @@ def assign_transaction_to_merchant(transaction: object, merchant: str, amount: s
     merchant_obj = MerchantsTable.objects.get(UID=merchant)
     tx_add = transaction.merchant.add(merchant_obj)
     merchant_token_obj = TokenTable.objects.get(merchant=merchant)
-    merchant_token_obj.allowedTokenAmount -= amount
+    # merchant_token_obj.allowedTokenAmount -= amount
     merchant_token_obj.unclear_bal += amount
 
     merchant_token_obj.save()
@@ -343,9 +343,8 @@ def update_cleared_uncleared_bal(merchant: object, status: str, amount: float):
     merchant_obj = TokenTable.objects.get(merchant=merchant)
     if status == "cleared":
         merchant_obj.unclear_bal -= amount
-        merchant_obj.allowedTokenAmount += float(amount) - float(
-            GENERAL_TRANSACTION_FEE
-        )
+        allowedAmt = float(amount) - float(GENERAL_TRANSACTION_FEE)
+        merchant_obj.allowedTokenAmount += allowedAmt
         merchant_obj.save()
 
     elif status == "uncleared":
@@ -358,6 +357,7 @@ def update_cleared_uncleared_bal(merchant: object, status: str, amount: float):
         # their uncleared balance can truly be reduced now
         merchant_obj.unclear_bal -= amount
         merchant_obj.save()
+    
 
 
 def delete_merchant(merchant: str) -> bool:
@@ -378,9 +378,11 @@ def protocolAudit():
         pending_unclear_amt=F("unclear_bal"),
         fiat_in_acct=F("total_mint_right")
         - (F("allowedTokenAmount") + F("unclear_bal")),
-        allowed_token_left=F("total_mint_right")
-        - F("pending_unclear_amt")
-        + F("fiat_in_acct"),
+        
+        # allowed_token_left=F("total_mint_right")
+        # - F("pending_unclear_amt")
+        # + F("fiat_in_acct"),
+        allowed_token_left=F("allowedTokenAmount")
     )
 
     return _edited

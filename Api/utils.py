@@ -18,6 +18,7 @@ from decouple import config
 from modelApp.utils import (
     add_and_update_transaction_hash,
     all_merchant_token_bal,
+    all_merchant_token_bal_no_filter,
     assign_transaction_to_merchant,
     check_transaction_hash_if_processed,
     get_all_merchant_object,
@@ -204,56 +205,15 @@ def isTransaction_Valid(
             pass
 
 
-# def is_user_withdrawal_memo_valid(hash:str, tx_memo):
-# def merchants_to_process_transaction(
-#     merchants: List, tx_amount: int, bank=None, transaction_type="deposit"
-# ) -> str:
-#     merchant_list = []
-#     if transaction_type == "deposit":
-#         for merchant in merchants:
-#             # Getting list of merchants to process transaction
-#             if merchant["allowedTokenAmount"] >= tx_amount:
-#                 merchant_list.append(merchant)
-#             else:
-#                 pass
-#     elif transaction_type == "user_withdrawals":
-#         for merchant in merchants:
-
-#             # if license token - allowed token > amount to withdraw
-
-#             if (
-#                 merchant["licenseTokenAmount"] - merchant["allowedTokenAmount"]
-#             ) >= tx_amount:
-#                 merchant_list.append(merchant)
-#             # Getting list of merchants to process transaction
-#             else:
-#                 pass
-
-#     if len(merchant_list) > 0:
-#         adc = random.choice(merchant_list)
-#         return adc
-#     else:
-#         return False
-
-
-
-def merchants_to_process_transaction(
-    recipient_block:str, tx_amount: int, bank=None, transaction_type="deposit"
+def first_time_transaction(
+    merchants: List, tx_amount: int, bank=None, transaction_type="deposit"
 ) -> str:
+    """
+    used for the initial transaction for when the protocol is initailized
+    """
     merchant_list = []
-    #Get last processed Transaction
-    transactions = TransactionsTable.objects.all().order_by("created_at")
-    tx_serializer = TransactionSerializer(transactions, many=True)
-    last_tx = tx_serializer.data[-1]
-    # filter list of merchant, using the last transaction and also who is send the present request
-    merchants = all_merchant_token_bal(last_tx["merchant"][0], blockchainaddress=recipient_block)
-    #serializer the return value
-
-    all_merchant = TokenTableSerializer(merchants, many=True).data
-
     if transaction_type == "deposit":
-
-        for merchant in all_merchant:
+        for merchant in merchants:
             # Getting list of merchants to process transaction
             if merchant["allowedTokenAmount"] >= tx_amount:
                 merchant_list.append(merchant)
@@ -277,6 +237,80 @@ def merchants_to_process_transaction(
         return adc
     else:
         return False
+
+
+
+def merchants_to_process_transaction(
+    recipient_block:str, tx_amount: int, bank=None, transaction_type="deposit"
+) -> str:
+    # merchant_list = []
+    #Get last processed Transaction
+    # transactions = TransactionsTable.objects.all().order_by("created_at")
+    # print(transactions)
+
+    # if len(transactions) < 1:
+    #     print("no tranasaction was found")
+        #used to initialize the protocol
+        # merchants = get_all_merchant_object()
+    merchants_list = TokenTableSerializer(
+                    all_merchant_token_bal_no_filter(), many=True
+            )
+
+    return_merchant = first_time_transaction(merchants=merchants_list.data, tx_amount=tx_amount, bank=None, transaction_type=transaction_type)
+    return return_merchant
+    # else:
+    
+    #     tx_serializer = TransactionSerializer(transactions, many=True)
+    
+    #     try:
+    #         # getting the last transaction processed
+    #         last_tx = tx_serializer.data[-1]
+    #     except IndexError:
+    #         #No transaction founc in the protocol, this should only happen initially
+    #         last_tx = None
+    #         # raise Exception("No transaction found at the moment")
+    #     else:
+    #         print(last_tx)
+    #         print(last_tx["merchant"])
+    #         if len(transactions) == 1:
+    #             #if len of transaction is 1, no need to filter for last merchant that process transaction
+    #             merchants = all_merchant_token_bal_no_filter()
+    #         else:
+    #             # filter list of merchant, using the last transaction and also who is send the present request
+    #             merchants = all_merchant_token_bal(last_tx["merchant"][0], blockchainaddress=recipient_block)
+    #         #serializer the return value
+            
+
+    #         print("this is mercahnts", merchants)
+
+    #         all_merchant = TokenTableSerializer(merchants, many=True).data
+
+    #         if transaction_type == "deposit":
+
+    #             for merchant in all_merchant:
+    #                 # Getting list of merchants to process transaction
+    #                 if merchant["allowedTokenAmount"] >= tx_amount:
+    #                     merchant_list.append(merchant)
+    #                 else:
+    #                     pass
+    #         elif transaction_type == "user_withdrawals":
+    #             for merchant in merchants:
+
+    #                 # if license token - allowed token > amount to withdraw
+
+    #                 if (
+    #                     merchant["licenseTokenAmount"] - merchant["allowedTokenAmount"]
+    #                 ) >= tx_amount:
+    #                     merchant_list.append(merchant)
+    #                 # Getting list of merchants to process transaction
+    #                 else:
+    #                     pass
+
+    #         if len(merchant_list) > 0:
+    #             adc = random.choice(merchant_list)
+    #             return adc
+    #         else:
+    #             return False
     
 
 
