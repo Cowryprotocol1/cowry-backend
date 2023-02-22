@@ -1,5 +1,5 @@
 import logging
-import re
+import os
 
 from Blockchains.Stellar.operations import (
     ALLOWED_AND_LICENSE_P_ADDRESS,
@@ -16,6 +16,10 @@ from Blockchains.Stellar.operations import (
     is_Asset_trusted,
     get_horizon_server,
     merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor,
+    DOMAIN,
+    build_challenge_tx,
+    server_verify_challenge,
+    generate_jwt
 )
 from Blockchains.Stellar.utils import check_address_balance,getStellar_tx_fromMemo, check_stellar_address, protocolAssetTotalSupply
 from decouple import config
@@ -80,7 +84,7 @@ from django.utils import timezone
 STAKING_TOKEN = config("STAKING_TOKEN_CODE")
 STAKING_ADDRESS = config("STAKING_ADDRESS")
 GENERAL_TRANSACTION_FEE = config("GENERAL_TRANSACTION_FEE")
-
+PROTOCOL_DELEGATED_SIGNER = config("DELEGATED_SIGNER_ADDRESS")
 
 SEP_INFO = {
     "deposit": {
@@ -1211,7 +1215,79 @@ def sep6Withdrawal(requests):
         return Response(serializer_Data.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class WEBAUTHENDPOINT(APIView):
+    """
+    Web authentication endpoint for stellar sep10
+    """
+    #write a get view that check two params
+    def get(self, request):
+        #get query params
+        query_params = request.query_params
+        print(query_params.get("account"))
+        print(query_params.get("memo"))
+        print(query_params.get("home_domain"))
+        
+        account = query_params.get("account")
+        home_domain = query_params.get("home_domain")
+        memo = query_params.get("memo")
+        if not account:
+            return Response(
+                {"error": "no 'account' provided"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
+        if memo:
+
+            try:
+                memo = int(query_params["memo"])
+            except ValueError:
+                return Response(
+                    {"error": "invalid 'memo' value. Expected a 64-bit integer."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if query_params["account"].startswith("M"):
+                return Response(
+                    {
+                        "error": "'memo' cannot be passed with a muxed client account address (M...)"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+                #add a check to check for valid domain 
+        if home_domain:
+            pass
+        elif not home_domain:
+            home_domain  = DOMAIN
+        build_challenge = build_challenge_tx(PROTOCOL_DELEGATED_SIGNER, account, home_domain)
+
+        return Response({"status":"successful",
+                        "transaction":f"{build_challenge}",
+                        "network_passphrase": get_network_passPhrase()},
+                    status=status.HTTP_200_OK,
+                )
+    def post(self, request) -> Response:
+        """
+        Validate a signed transaction and generate a jwt sep10
+        """
+
+        envelope_xdr = request.data.get("transaction")
+        if not envelope_xdr:
+            return Response(
+                "'transaction' is required",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if envelope_xdr:
+            try:
+                auth_domain = os.path.join(DOMAIN, "auth")
+                adc, client_domain = server_verify_challenge(challenge=envelope_xdr, home_domain=DOMAIN, web_auth_domain=auth_domain)
+            except Exception as error:
+                print("this error")
+                print(error.args[0])
+                return Response({"error":"error verifying your transaction"}, status=status.HTTP_400_BAD_REQUEST)
+            print("this is the verified response from the server", adc, client_domain)
+            
+            token = generate_jwt(challenge=envelope_xdr, client_domain=client_domain)
+            return Response({
+                "token":f"{token}"
+            }, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
 def sep24Withdrawal(request):

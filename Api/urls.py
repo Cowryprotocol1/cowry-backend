@@ -20,7 +20,8 @@ urlpatterns = [
     path("sep6/withdraw", sep6Withdrawal, name="sep6Withdraw"), #tested
     path("submit_xdr", SubmitAnXdr.as_view(), name="submitxdr"),
     path("audit_protocol", auditProtocol, name="audit"), #tested
-    path("transactionStatus", transactionStatus, name="transactionStatus") #tested
+    path("transactionStatus", transactionStatus, name="transactionStatus"), #tested
+    path("auth", WEBAUTHENDPOINT.as_view(), name="sep10")
     # path("transactions/deposit/interactive", sep24Withdrawal, name='sep24Stellar')
     # path("canceltransaction", TransactionExpire.as_view(), name="TransactionExpire")
     
