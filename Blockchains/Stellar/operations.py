@@ -4,11 +4,24 @@ from stellar_sdk.keypair import Keypair
 from stellar_sdk import Server, Asset, TransactionBuilder, Network, Signer, Claimant, ClaimPredicate, AuthorizationFlag, TrustLineFlags
 from stellar_sdk.transaction_builder import TransactionBuilder
 from stellar_sdk.exceptions import NotFoundError, BadRequestError, BadResponseError
+from stellar_sdk.sep.exceptions import InvalidSep10ChallengeError
+
 from stellar_sdk.transaction_envelope import TransactionEnvelope
 import logging
 logging.basicConfig(level=logging.INFO,  format="%(levelname)s %(message)s")
 # from .utils import calculateTxFee, minimum_transaction_fee
+from stellar_sdk.sep.stellar_web_authentication import (
+    build_challenge_transaction,
+    read_challenge_transaction,
+    verify_challenge_transaction_signed_by_client_master_key,
+    verify_challenge_transaction_threshold,
+)
+from stellar_sdk.operation.manage_data import ManageData
+import jwt, os
+
 XDR = TypeVar('XDR')
+
+DOMAIN = config("COWRY_DEFAULT_DOMAIN")
 
 STAKING_ADDRESS = config("STAKING_ADDRESS")
 STAKING_ADDRESS_SIGNER = config("STAKING_ADDRESS_SIGNER")
@@ -581,4 +594,124 @@ def submit_feeBump_transaction(transaction_xdr):
     sent_fee_block = get_horizon_server().submit_transaction(transaction_feeBump)
     return sent_fee_block
 
+
+def build_challenge_tx(server_key:str,
+        client_key:str,
+        client_domain:str,
+        _web_auth_domain=os.path.join(DOMAIN, "auth")):
+    
+    # Server builds challenge transaction
+    challenge_tx = build_challenge_transaction(server_secret=server_key, client_account_id=client_key, home_domain=client_domain, web_auth_domain=_web_auth_domain, network_passphrase=get_network_passPhrase())
+    print("this is chanllenge tx", challenge_tx)
+
+    return challenge_tx
+
+
+def server_verify_challenge(challenge:"XDR", home_domain:str, web_auth_domain:str, server_pub_key=Keypair.from_secret(DELEGATED_SIGNER_ADDRESS).public_key) -> str:
+    server = get_horizon_server()
+    network_pass=get_network_passPhrase()
+
+
+    # Server verifies signed challenge transaction
+    read_xdr = read_challenge_transaction(
+        challenge_transaction=challenge,
+        server_account_id=server_pub_key,
+        home_domains=home_domain,
+        web_auth_domain=web_auth_domain,
+        network_passphrase=network_pass,
+
+        )
+    print("found xdr", read_xdr)
+
+    
+    client_domain = None
+    for operation in read_xdr.transaction.transaction.operations:
+        print("this is operation", operation)
+      
+        if (
+            isinstance(operation, ManageData)
+            and operation.data_name == "client_domain"
+        ):
+            print("this is operation", operation.data_name)
+            print("this is operation", operation.data_value)
+            print("*" * 20)
+            client_domain = operation.data_value.decode()
+            # break
+    print(client_domain)
+    requester_acct = read_xdr.transaction.transaction.operations[0].source.account_id
+
+    client_account_exists = False
+    horizon_client_account = None
+    try:
+        horizon_client_account = server.load_account(requester_acct)
+        client_account_exists = True
+    except NotFoundError:
+        raise Exception("Valid account not found, you need to sign xdr with master key")
+    
+    print(client_domain)
+    if client_account_exists:
+        # gets list of signers from account
+        signers = horizon_client_account.load_ed25519_public_key_signers()
+        # chooses the threshold to require: low, med or high
+        threshold = horizon_client_account.thresholds.med_threshold
+        try:
+            signed_transaction = verify_challenge_transaction_threshold(
+                challenge,
+                server_pub_key,
+                home_domain,
+                web_auth_domain,
+                network_pass,
+                threshold,
+                signers,
+            )
+        except InvalidSep10ChallengeError as e:
+            print("You should handle possible exceptions:")
+            print(e)
+            raise Exception(e)
+        else:
+            return signed_transaction, client_domain
+    else:
+        # verifies that master key has signed challenge transaction
+        try:
+            signed_transaction = verify_challenge_transaction_signed_by_client_master_key(
+                challenge,
+                server_pub_key,
+                home_domain,
+                web_auth_domain,
+                network_pass,
+            )
+            print("Client Master Key Verified.")
+            print("need to issue jwt token via endpoint")
+            return signed_transaction, client_domain
+        except InvalidSep10ChallengeError as e:
+            print("You should handle possible exceptions:")
+            print(e)
+
+
+def generate_jwt(challenge, client_domain):
+    from stablecoin import settings
+
+       # Server verifies signed challenge transaction
+    read_xdr = read_challenge_transaction(
+        challenge,
+        Keypair.from_secret(DELEGATED_SIGNER_ADDRESS).public_key,
+        DOMAIN,
+        os.path.join(DOMAIN, "auth"),
+        get_network_passPhrase(),
+    )
+
+    if read_xdr.client_account_id.startswith("M") or not read_xdr.memo:
+        sub = read_xdr.client_account_id
+    else:
+        sub = f"{read_xdr.client_account_id}:{read_xdr.memo}"
+    issued_at = read_xdr.transaction.transaction.preconditions.time_bounds.min_time
+    jwt_dict = {
+        "iss": os.path.join(DOMAIN, "auth"),
+        "sub": sub,
+        "iat": issued_at,
+        "exp": issued_at + 24 * 60 * 60,
+        "jti": read_xdr.transaction.hash().hex(),
+        "client_domain": client_domain,
+    }
+    return jwt.encode(jwt_dict, settings.SECRET_KEY, algorithm="HS256")
 

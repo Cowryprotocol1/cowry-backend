@@ -9,7 +9,6 @@ from celery import shared_task
 
 import requests
 from Blockchains.Stellar.operations import (
-    STABLECOIN_CODE,
     STABLECOIN_ISSUER,
     Mint_Token,
     get_horizon_server,
@@ -338,3 +337,5 @@ def Notifications(recipient_email, subject, message):
 # acc = isTransaction_Valid("202ff08e0dca56509f5fb3c77a11b92bac11efffe91063329a1ef77cd36eed22", "3506927921b2d889e956", _asset_code="NGN", _asset_issuer="GCYROSEOTQR6J5ROTCCLZ36X5ZSUEMNMB2BOZEYXUWQH3IW32E3VDORJ", event_transaction_type="merchant_staking")
 
 # print(acc)
+
+

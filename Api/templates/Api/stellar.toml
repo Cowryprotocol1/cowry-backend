@@ -4,6 +4,8 @@
 NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
 #FEDERATION_SERVER="coming soon"
 TRANSFER_SERVER = "https://stablemvp.herokuapp.com/sep6"
+WEB_AUTH_ENDPOINT = "https://stablemvp.herokuapp.com/auth"
+TRANSFER_SERVER_SEP0024 = "https://stablemvp.herokuapp.com/sep24"
 
 [DOCUMENTATION]
 ORG_NAME="Cowry Protocol"

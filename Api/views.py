@@ -1,5 +1,5 @@
 import logging
-import re
+import os
 
 from Blockchains.Stellar.operations import (
     ALLOWED_AND_LICENSE_P_ADDRESS,
@@ -16,6 +16,10 @@ from Blockchains.Stellar.operations import (
     is_Asset_trusted,
     get_horizon_server,
     merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor,
+    DOMAIN,
+    build_challenge_tx,
+    server_verify_challenge,
+    generate_jwt
 )
 from Blockchains.Stellar.utils import check_address_balance,getStellar_tx_fromMemo, check_stellar_address, protocolAssetTotalSupply
 from decouple import config
@@ -33,7 +37,10 @@ from modelApp.utils import (
     update_cleared_uncleared_bal,
     update_pending_transaction_model,
     update_PendingTransaction_Model,
+    update_sep_transaction,
+    update_sep_transaction_no_ifp,
     update_xdr_table,
+    insert_sep_transaction,
     get_all_transaction_for_merchant,
     get_transaction_by_pubKey
 )
@@ -44,7 +51,7 @@ from rest_framework.views import APIView
 from stellar_sdk import TransactionEnvelope, TrustLineFlags
 from stellar_sdk.exceptions import NotFoundError, BadRequestError, BadResponseError
 
-from utils.utils import uidGenerator
+from utils.utils import uidGenerator, Id_generator
 
 from .serializers import (
     EventSerializer,
@@ -69,6 +76,8 @@ from .utils import (
 from rest_framework.renderers import TemplateHTMLRenderer
 from modelApp.models import PeriodicTaskRun
 from django.utils import timezone
+from django.db.models import Sum, F, Q, Value, CharField
+
 
 # new_time = timezone.now()
 # PeriodicTaskRun.objects.update(created_at=new_time)
@@ -80,7 +89,7 @@ from django.utils import timezone
 STAKING_TOKEN = config("STAKING_TOKEN_CODE")
 STAKING_ADDRESS = config("STAKING_ADDRESS")
 GENERAL_TRANSACTION_FEE = config("GENERAL_TRANSACTION_FEE")
-
+PROTOCOL_DELEGATED_SIGNER = config("DELEGATED_SIGNER_ADDRESS")
 
 SEP_INFO = {
     "deposit": {
@@ -238,9 +247,15 @@ class ON_RAMP_FIAT_USERS(APIView):
             bankType = request.data.get("bankType")
             blockchainAddress = request.data.get("blockchainAddress")
             transaction_narration = request.data.get("narration")
+            transaction_source = request.data.get("transaction_source")
             check_data = Fiat_On_RampSerializer(data=request.data)
+            # 12/sep/1995
+
+            
 
             if check_data.is_valid():
+                print(check_data.validated_data)
+                # print()
                 # check if the address has a trustline for the NGN asset
                 is_asset_trusted = is_Asset_trusted( address =blockchainAddress, asset_number=1, issuerAddress=STABLECOIN_ISSUER)
 
@@ -261,59 +276,102 @@ class ON_RAMP_FIAT_USERS(APIView):
                                 status=status.HTTP_400_BAD_REQUEST,
                             )
                     # add filtering process for deposit and check for multiple deposit option
-                    print(MA_selected)
+                    # print(MA_selected)
                     if MA_selected:
-                        try:
-                            update_pending_transaction_model(
-                                MA_selected["merchant"]["UID"],
-                                transaction_amt=str(
-                                    float(amount) + float(GENERAL_TRANSACTION_FEE)
-                                ),
-                                transaction_type="deposit",
-                                narration=transaction_narration,
-                                transaction_memo=MA_selected["merchant"]["UID"],
-                                transaction_status="pending",
-                                phone_num=MA_selected["merchant"]["phoneNumber"],
-                                user_bank_account=MA_selected["merchant"]["bankAccount"],
-                                bank_name=MA_selected["merchant"]["bankName"],
-                                user_block_address=blockchainAddress,
-                            )
-                        except IntegrityError as e:
-                            # if "UNIQUE constraint failed" in e.args:
-                            return Response(
-                                {
-                                    "error": "there is a pending payment with this narration, please update transaction narration"
-                                },
-                                status=status.HTTP_400_BAD_REQUEST,
-                            )
-                            # else:
-                            #     # notify admin
-                            #     return Response(
-                            #         {"error": "something went wrong"},
-                            #         status=status.HTTP_400_BAD_REQUEST,
-                            #     )
-                        else:
-                            # IFPs should be able to cancel a pending transaction after a certain amount of time
-                            # IFP should be able to specify the amount they receive with a particular transaction narration
-                            transactionFeeAmt =  float(amount) + float(GENERAL_TRANSACTION_FEE)
-                            update_cleared_uncleared_bal(
-                                MA_selected["merchant"]["UID"], "uncleared", transactionFeeAmt
-                            )
+                        transaction_src = request.data.get("transaction_source")
+                        # if transaction_src != "sep" :
+                        if transaction_src == None:
+                            print("got inside protocol")
+                            try:
+                                print("inside trx")
+                                update_pending_transaction_model(
+                                    MA_selected["merchant"]["UID"],
+                                    transaction_amt=str(
+                                        float(amount) + float(GENERAL_TRANSACTION_FEE)
+                                    ),
+                                    transaction_type="deposit",
+                                    narration=transaction_narration,
+                                    transaction_memo=MA_selected["merchant"]["UID"],
+                                    transaction_status="pending",
+                                    phone_num=MA_selected["merchant"]["phoneNumber"],
+                                    user_bank_account=MA_selected["merchant"]["bankAccount"],
+                                    bank_name=MA_selected["merchant"]["bankName"],
+                                    user_block_address=blockchainAddress,
+                                )
+                                print("done update")
+                            except IntegrityError as e:
+                                # if "UNIQUE constraint failed" in e.args:
+                                return Response(
+                                    {
+                                        "error": "there is a pending payment with this narration, please update transaction narration"
+                                    },
+                                    status=status.HTTP_400_BAD_REQUEST,
+                                )
+                        if transaction_src and transaction_src == "sep":
+                            print("inside sep")
+                        
+                            transactionId = request.data.get("transaction_Id")
+                            print(transactionId)
+                            if not transactionId:
+                                return Response({"error":"transaction_Id needed for this transaction"}, status=status.HTTP_400_BAD_REQUEST)
+                            try:
+                                trx = TransactionsTable.objects.get(id=transactionId)
+                            except (TransactionsTable.DoesNotExist):
+                                return Response({"error":"transaction_Id not found"}, status=status.HTTP_400_BAD_REQUEST)
 
-                            data = {
-                                "message": f"Send funds to account below with the following details, the correct amount to send is {float(amount) + float(GENERAL_TRANSACTION_FEE)}, please include your narration when making deposit in from your bank account",
-                                "memo": MA_selected["merchant"]["UID"],
-                                "amount": amount,
-                                "fee": GENERAL_TRANSACTION_FEE,
-                                "amount_to_pay":transactionFeeAmt,
-                                "narration": transaction_narration,
-                                "bank_name": MA_selected["merchant"]["bankName"],
-                                "account_number": MA_selected["merchant"]["bankAccount"],
-                                "phoneNumber": MA_selected["merchant"]["phoneNumber"],
-                                "eta": "5 minutes",
-                            }
+                            # print(trx)
+                            if trx.transaction_narration != ("sep"+transactionId):
+                                return Response({"error":"invalid transaction Id"}, status=status.HTTP_400_BAD_REQUEST)
+                            #update the sep transaction
+                            try:
+                                print("valide inside")
+                                update_sep_transaction(
+                                    transaction_Id=transactionId,
+                                    merchant_id=  MA_selected["merchant"]["UID"],
+                                    transaction_amt=str(
+                                        float(amount) + float(GENERAL_TRANSACTION_FEE)
+                                    ),
+                                    transaction_type="deposit",
+                                    narration=transaction_narration,
+                                    transaction_memo=MA_selected["merchant"]["UID"],
+                                    transaction_status="pending",
+                                    phone_num=MA_selected["merchant"]["phoneNumber"],
+                                    user_bank_account=MA_selected["merchant"]["bankAccount"],
+                                    bank_name=MA_selected["merchant"]["bankName"],
+                                    user_block_address=blockchainAddress
+                                    )
+                                print("validation pass")
+                            except IntegrityError as e:
+                                return Response(
+                                    {
+                                        "error": "there is a pending payment with this narration, please update transaction narration"
+                                    },
+                                    status=status.HTTP_400_BAD_REQUEST,
+                                )
+                            pass
+                        # else:
+                        # IFPs should be able to cancel a pending transaction after a certain amount of time
+                        # IFP should be able to specify the amount they receive with a particular transaction narration
+                        transactionFeeAmt =  float(amount) + float(GENERAL_TRANSACTION_FEE)
+                        # update_cleared_uncleared_bal(
+                        #     MA_selected["merchant"]["UID"], "uncleared", transactionFeeAmt
+                        # )
+                        print("got outside")
 
-                            return Response(data=data, status=status.HTTP_200_OK)
+                        s_data = {
+                            "message": f"Send funds to account below with the following details, the correct amount to send is {float(amount) + float(GENERAL_TRANSACTION_FEE)}, please include your narration when making deposit in from your bank account",
+                            "memo": MA_selected["merchant"]["UID"],
+                            "amount": amount,
+                            "fee": GENERAL_TRANSACTION_FEE,
+                            "amount_to_pay":transactionFeeAmt,
+                            "narration": transaction_narration,
+                            "bank_name": MA_selected["merchant"]["bankName"],
+                            "account_number": MA_selected["merchant"]["bankAccount"],
+                            "phoneNumber": MA_selected["merchant"]["phoneNumber"],
+                            "eta": "5 minutes",
+                        }
+                        print("return this data", s_data)
+                        return Response(data=s_data, status=status.HTTP_200_OK)
                     else:
                         return Response(
                             data={
@@ -332,14 +390,16 @@ class ON_RAMP_FIAT_USERS(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
             else:
+
+                print("this one",check_data.errors)
                 return Response(
                     {"error": check_data.errors}, status=status.HTTP_400_BAD_REQUEST
                 )
 
 
-# ==============================================================================
-# HANDLING MULTIPLE POST WITH A SINGLE CLASS BASED VIEW
-# ==============================================================================
+# # ==============================================================================
+# # HANDLING MULTIPLE POST WITH A SINGLE CLASS BASED VIEW
+# # ==============================================================================
 
 
 
@@ -362,7 +422,7 @@ class ON_RAMP_FIAT_USERS(APIView):
             memo = request.data.get("memo")
 
             # if memo and acct_number and amount and phone_number and bank_name and narration and user_blockchain_address:
-            check_args = Fiat_Off_RampSerializer(data=_data)
+            check_args = Fiat_Off_RampSerializer(data=request.data)
             if check_args.is_valid() and memo:
                 try:
 
@@ -443,7 +503,7 @@ class OFF_RAMP_FIAT(APIView):
         _data["blockchain_address"] = request.data.get("blockchain_address")
         _data["transaction_narration"] = request.data.get("transaction_narration")
         _data["amount"] = request.data.get("amount")
-        serializer = Fiat_Off_RampSerializer(data=_data)
+        serializer = Fiat_Off_RampSerializer(data=request.data)
         if serializer.is_valid():
             _data["expected_amount_with_fee"] = float(
                 request.data.get("amount")
@@ -458,50 +518,92 @@ class OFF_RAMP_FIAT(APIView):
                 # if any users has a balance, then their is a merchant with debt to the protocol
                 # we can easily process payment just by checking a users balance
                 # we should probably check with server to make sure there is a merchant with debt
-                try:
+                transaction_src = request.data.get("transaction_source")
+                
+                if transaction_src == None:
+                    try:
 
-                    transaction_p = update_PendingTransaction_Model(
-                        transaction_amt=float(_data["amount"]) + float(GENERAL_TRANSACTION_FEE),
-                        transaction_type="withdraw",
-                        narration=_data["transaction_narration"],
-                        transaction_hash=None,
-                        user_block_address=_data["blockchain_address"],
-                        phone_num=_data["phone_number"],
-                        user_bank_account=_data["account_number"],
-                        bank_name=_data["bank_name"],
-                    )
+                        transaction_p = update_PendingTransaction_Model(
+                            transaction_amt=float(_data["amount"]) + float(GENERAL_TRANSACTION_FEE),
+                            transaction_type="withdraw",
+                            narration=_data["transaction_narration"],
+                            transaction_hash=None,
+                            user_block_address=_data["blockchain_address"],
+                            phone_num=_data["phone_number"],
+                            user_bank_account=_data["account_number"],
+                            bank_name=_data["bank_name"],
+                        )
 
-                except IntegrityError as e:
-                    print("this endpoint",e)
 
-                    # if "UNIQUE constraint failed" in e.args[0]:
-                    return Response(
-                        {
-                            "error": "there is a pending payment with this narration, please update transaction narration"
-                        },
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                    # else:
-                    #     # notify admin
-                    #     return Response(
-                    #         {"error": "something went wrong"},
-                    #         status=status.HTTP_400_BAD_REQUEST,
-                    #     )
+                    except IntegrityError as e:
+                        print("this endpoint",e)
+
+                        # if "UNIQUE constraint failed" in e.args[0]:
+                        return Response(
+                            {
+                                "error": "there is a pending payment with this narration, please update transaction narration"
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                        # else:
+                        #     # notify admin
+                        #     return Response(
+                        #         {"error": "something went wrong"},
+                        #         status=status.HTTP_400_BAD_REQUEST,
+                        #     )
                 else:
-                    _resp_data = {}
-                    _resp_data[
-                        "message"
-                    ] = f"Please send Token to the address below, kindly note to add a transaction fee of {GENERAL_TRANSACTION_FEE} {STABLECOIN_CODE} to your transaction, \nOnce transaction is send to the below address, your account will be credited. Thank You"
-                    _resp_data["blockchain_address"] = STABLECOIN_ISSUER
-                    _resp_data["deposit_asset_code"] = STABLECOIN_CODE
-                    _resp_data["deposit_asset_issuer"] = STABLECOIN_ISSUER
-                    _resp_data["memo"] = f"{transaction_p.id}"
-                    _resp_data["user_details"] = _data
-                    _data["eta"] = "10min"
+                    transactionId = request.data.get("transaction_Id")
+                    if not transactionId:
+                        return Response({"error":"transaction_Id needed for this transaction"}, status=status.HTTP_400_BAD_REQUEST)
+                    try:
+                        trx = TransactionsTable.objects.get(id=transactionId)
+                    except (TransactionsTable.DoesNotExist):
+                        return Response({"error":"transaction_Id not found"}, status=status.HTTP_400_BAD_REQUEST)
 
-                    # _resp_data["xdr"] = withdrawal_xdr
+                    # print(trx)
+                    if trx.transaction_narration != ("sep"+transactionId):
+                        return Response({"error":"invalid transaction Id"}, status=status.HTTP_400_BAD_REQUEST)
+                    #update the sep transaction
+                    try:
+                        transaction_p = update_sep_transaction_no_ifp(
+                            transaction_Id=transactionId,
+                            transaction_amt=str(
+                                float(_data["amount"]) + float(GENERAL_TRANSACTION_FEE)
+                            ),
+                            transaction_type="withdraw",
+                            narration=_data["transaction_narration"],
+                            transaction_status="pending",
+                            phone_num=_data["phone_number"],
+                            user_bank_account=_data["account_number"],
+                            bank_name=_data["bank_name"],
+                            user_block_address=_data["blockchain_address"]
+                            )
+                        print("insert", transaction_p)
+                        
+                    except IntegrityError as e:
+                        print(e)
+                        return Response(
+                            {
+                                "error": "there is a pending payment with this narration, please update transaction narration"
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
 
-                    return Response(_resp_data, status=status.HTTP_200_OK)
+                # else:
+                _resp_data = {}
+                _resp_data[
+                    "message"
+                ] = f"Please send Token to the address below, kindly note to add a transaction fee of {GENERAL_TRANSACTION_FEE} {STABLECOIN_CODE} to your transaction, \nOnce transaction is send to the below address, your account will be credited. Thank You"
+                _resp_data["blockchain_address"] = STABLECOIN_ISSUER
+                _resp_data["deposit_asset_code"] = STABLECOIN_CODE
+                _resp_data["deposit_asset_issuer"] = STABLECOIN_ISSUER
+                _resp_data["memo"] = f"{transaction_p.id}"
+                _resp_data["user_details"] = _data
+                _data["eta"] = "10min"
+
+                # _resp_data["xdr"] = withdrawal_xdr
+
+                return Response(_resp_data, status=status.HTTP_200_OK)
             # else:
             #     return Response(data={"message": "No merchant Available for Withdrawal at the moment, please check back later"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -511,6 +613,7 @@ class OFF_RAMP_FIAT(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         else:
+            print("this error", serializer.errors)
             return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -1211,14 +1314,166 @@ def sep6Withdrawal(requests):
         return Response(serializer_Data.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class WEBAUTHENDPOINT(APIView):
+    """
+    Web authentication endpoint for stellar sep10
+    """
+    #write a get view that check two params
+    def get(self, request):
+        #get query params
+        query_params = request.query_params
+        print(query_params.get("account"))
+        print(query_params.get("memo"))
+        print(query_params.get("home_domain"))
+        
+        account = query_params.get("account")
+        home_domain = query_params.get("home_domain")
+        memo = query_params.get("memo")
+        if not account:
+            return Response(
+                {"error": "no 'account' provided"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
+        if memo:
 
-@api_view(["GET"])
-def sep24Withdrawal(request):
-    # get sep10 token
-    data_ = request.data
-    print(data_)
+            try:
+                memo = int(query_params["memo"])
+            except ValueError:
+                return Response(
+                    {"error": "invalid 'memo' value. Expected a 64-bit integer."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if query_params["account"].startswith("M"):
+                return Response(
+                    {
+                        "error": "'memo' cannot be passed with a muxed client account address (M...)"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+                #add a check to check for valid domain 
+        if home_domain:
+            pass
+        elif not home_domain:
+            home_domain  = DOMAIN
+        build_challenge = build_challenge_tx(PROTOCOL_DELEGATED_SIGNER, account, home_domain)
 
+        return Response({"status":"successful",
+                        "transaction":f"{build_challenge}",
+                        "network_passphrase": get_network_passPhrase()},
+                    status=status.HTTP_200_OK,
+                )
+    def post(self, request) -> Response:
+        """
+        Validate a signed transaction and generate a jwt sep10
+        """
+
+        envelope_xdr = request.data.get("transaction")
+        if not envelope_xdr:
+            return Response(
+                "'transaction' is required",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if envelope_xdr:
+            try:
+                auth_domain = os.path.join(DOMAIN, "auth")
+                adc, client_domain = server_verify_challenge(challenge=envelope_xdr, home_domain=DOMAIN, web_auth_domain=auth_domain)
+            except Exception as error:
+                print("this error")
+                print(error.args[0])
+                return Response({"error":"error verifying your transaction"}, status=status.HTTP_400_BAD_REQUEST)
+            print("this is the verified response from the server", adc, client_domain)
+            
+            token = generate_jwt(challenge=envelope_xdr, client_domain=client_domain)
+            return Response({
+                "token":f"{token}"
+            }, status=status.HTTP_200_OK)
+
+# @api_view(["GET"])
+# def sep24Withdrawal(request):
+# class Sep24SetUp(APIView):
+#     # get sep10 token
+#     renderer_classes = [TemplateHTMLRenderer]
+#     template_name = "Api/sep24.html"
+#     def get(self, requests):
+#         data = {"test": "ok"}
+#         return Response(data)
+    
+class Sep24DepositFlow(APIView):
+    """
+    endpoint post method handles deposit transaction
+    """
+    # renderer_classes = [TemplateHTMLRenderer]
+    
+    def post(self, request, *args, **kwargs):
+        sep24data = Sep6DepositSerializer(data=request.data)
+        if sep24data.is_valid():
+            _id = Id_generator()
+            data = insert_sep_transaction(_id, transaction_type="deposit", transaction_amt=0, narration=("sep" + str(_id)), transaction_status="Pending")
+            data = {
+                "type": "interactive_customer_info_needed",
+                # "url" : f"https://cowryprotocol.io/deposit?transaction_id={_id}&asset_code={STABLECOIN_CODE}&asset_issuer={STABLECOIN_ISSUER}&account={request.data.get('account')}",
+                "url":f"http://127.0.0.1:5173/deposit?transaction_id={_id}&asset_code={STABLECOIN_CODE}&asset_issuer={STABLECOIN_ISSUER}&account={request.data.get('account')}",
+                #this should then open up url to the widget model, from here we can stick to the flow for the deposit from the protocol endpoint
+                "id": f"{_id}"
+                }
+            return Response(data, status=status.HTTP_200_OK)
+            
+        else:
+            return Response({"error":sep24data.errors}, status.HTTP_400_BAD_REQUEST)
+        
+        # print(sep24data)
+        # print("this is the endpoint that was called")
+        # return Response(template_name = "Api/sep24.html")
+
+class Sep24InfoEndpoint(APIView):
+    def get(self, request, *args, **kwargs):
+        
+        transactionId = self.request.query_params.get("id")
+        ex_transactionId = self.request.query_params.get("stellar_transaction_id")
+        in_transactionId = self.request.query_params.get("external_transaction_id")
+
+        if transactionId is None:
+            return Response({ "error": "this query requires an 'id' "}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+
+            transaction = TransactionsTable.objects.filter(id=transactionId)
+        except TransactionsTable.DoesNotExist:
+            return Response({"error":"invalid transaction Id "}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # print(transaction)
+        transaction_data = transaction.values(
+            transaction_id=F("merchant"),
+            kind=F("transaction_type"),
+            status=F("transaction_status"),
+            started_at = F("created_at"),
+            amount = F("transaction_amount")
+        )
+        transaction = transaction_data[0]
+        _data = {}
+        _data["eta"] = 3600
+        _data["external_transaction_id"] = None
+        _data["amount_fee"]= GENERAL_TRANSACTION_FEE
+        transaction.update(_data)
+
+        return  JsonResponse({"transaction":transaction}, safe=False, status=status.HTTP_200_OK)
+    
+
+class Sep24WithdrawalFlow(APIView):
+    def post(self, request, *args, **kwargs):
+        sep24data = Sep6DepositSerializer(data=request.data)
+        if sep24data.is_valid():
+            _id = Id_generator()
+            data = insert_sep_transaction(_id, transaction_type="withdraw", transaction_amt=0, narration=("sep" + str(_id)), transaction_status="Pending")
+            data = {
+                "type": "interactive_customer_info_needed",
+                "url":f"http://127.0.0.1:5173/withdrawal?transaction_id={_id}&asset_code={STABLECOIN_CODE}&asset_issuer={STABLECOIN_ISSUER}&account={request.data.get('account')}",
+                #this should then open up url to the widget model, from here we can stick to the flow for the deposit from the protocol endpoint
+                "id": f"{_id}"
+                }
+            return Response(data, status=status.HTTP_200_OK)
+            
+        else:
+            return Response({"error":sep24data.errors}, status.HTTP_400_BAD_REQUEST)
 # class TransactionExpire(APIView):
 #     """
 #     Endpoint for merchant to cancel a transaction after a specified time and the transaction has not been processed
