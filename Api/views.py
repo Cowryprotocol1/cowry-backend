@@ -353,9 +353,9 @@ class ON_RAMP_FIAT_USERS(APIView):
                         # IFPs should be able to cancel a pending transaction after a certain amount of time
                         # IFP should be able to specify the amount they receive with a particular transaction narration
                         transactionFeeAmt =  float(amount) + float(GENERAL_TRANSACTION_FEE)
-                        # update_cleared_uncleared_bal(
-                        #     MA_selected["merchant"]["UID"], "uncleared", transactionFeeAmt
-                        # )
+                        update_cleared_uncleared_bal(
+                            MA_selected["merchant"]["UID"], "uncleared", transactionFeeAmt
+                        )
                         print("got outside")
 
                         s_data = {
