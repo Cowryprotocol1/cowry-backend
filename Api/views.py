@@ -307,47 +307,75 @@ class ON_RAMP_FIAT_USERS(APIView):
                                     },
                                     status=status.HTTP_400_BAD_REQUEST,
                                 )
-                        if transaction_src and transaction_src == "sep":
+                        # if transaction_src and transaction_src == "sep":
+                        else:
                             print("inside sep")
                         
                             transactionId = request.data.get("transaction_Id")
                             print(transactionId)
-                            if not transactionId:
-                                return Response({"error":"transaction_Id needed for this transaction"}, status=status.HTTP_400_BAD_REQUEST)
+                            if not transactionId or transactionId == None or transactionId == '':
+                                transactionId = Id_generator()
+                                # return Response({"error":"transaction_Id needed for this transaction"}, status=status.HTTP_400_BAD_REQUEST)
+                                
                             try:
                                 trx = TransactionsTable.objects.get(id=transactionId)
                             except (TransactionsTable.DoesNotExist):
-                                return Response({"error":"transaction_Id not found"}, status=status.HTTP_400_BAD_REQUEST)
+                                try:
+                                    update_pending_transaction_model(
+                                            MA_selected["merchant"]["UID"],
+                                            transaction_amt=str(
+                                                float(amount) + float(GENERAL_TRANSACTION_FEE)
+                                            ),
+                                            transaction_type="deposit",
+                                            narration=transaction_narration,
+                                            transaction_memo=MA_selected["merchant"]["UID"],
+                                            transaction_status="pending",
+                                            phone_num=MA_selected["merchant"]["phoneNumber"],
+                                            user_bank_account=MA_selected["merchant"]["bankAccount"],
+                                            bank_name=MA_selected["merchant"]["bankName"],
+                                            user_block_address=blockchainAddress,
+                                        )
+                                except IntegrityError as e:
+                                    print("this endpoint",e)
+                                # if "UNIQUE constraint failed" in e.args[0]:
+                                    return Response(
+                                        {
+                                            "error": "there is a pending payment with this narration, please update transaction narration"
+                                        },
+                                        status=status.HTTP_400_BAD_REQUEST,
+                                    )
+                                # return Response({"error":"transaction_Id not found"}, status=status.HTTP_400_BAD_REQUEST)
 
                             # print(trx)
-                            if trx.transaction_narration != ("sep"+transactionId):
-                                return Response({"error":"invalid transaction Id"}, status=status.HTTP_400_BAD_REQUEST)
-                            #update the sep transaction
-                            try:
-                                print("valide inside")
-                                update_sep_transaction(
-                                    transaction_Id=transactionId,
-                                    merchant_id=  MA_selected["merchant"]["UID"],
-                                    transaction_amt=str(
-                                        float(amount) + float(GENERAL_TRANSACTION_FEE)
-                                    ),
-                                    transaction_type="deposit",
-                                    narration=transaction_narration,
-                                    transaction_memo=MA_selected["merchant"]["UID"],
-                                    transaction_status="pending",
-                                    phone_num=MA_selected["merchant"]["phoneNumber"],
-                                    user_bank_account=MA_selected["merchant"]["bankAccount"],
-                                    bank_name=MA_selected["merchant"]["bankName"],
-                                    user_block_address=blockchainAddress
+                            else:
+                                if trx.transaction_narration != ("sep"+transactionId):
+                                    return Response({"error":"invalid transaction Id"}, status=status.HTTP_400_BAD_REQUEST)
+                                #update the sep transaction
+                                try:
+                                    print("valide inside")
+                                    update_sep_transaction(
+                                        transaction_Id=transactionId,
+                                        merchant_id=  MA_selected["merchant"]["UID"],
+                                        transaction_amt=str(
+                                            float(amount) + float(GENERAL_TRANSACTION_FEE)
+                                        ),
+                                        transaction_type="deposit",
+                                        narration=transaction_narration,
+                                        transaction_memo=MA_selected["merchant"]["UID"],
+                                        transaction_status="pending",
+                                        phone_num=MA_selected["merchant"]["phoneNumber"],
+                                        user_bank_account=MA_selected["merchant"]["bankAccount"],
+                                        bank_name=MA_selected["merchant"]["bankName"],
+                                        user_block_address=blockchainAddress
+                                        )
+                                    print("validation pass")
+                                except IntegrityError as e:
+                                    return Response(
+                                        {
+                                            "error": "there is a pending payment with this narration, please update transaction narration"
+                                        },
+                                        status=status.HTTP_400_BAD_REQUEST,
                                     )
-                                print("validation pass")
-                            except IntegrityError as e:
-                                return Response(
-                                    {
-                                        "error": "there is a pending payment with this narration, please update transaction narration"
-                                    },
-                                    status=status.HTTP_400_BAD_REQUEST,
-                                )
                             pass
                         # else:
                         # IFPs should be able to cancel a pending transaction after a certain amount of time
@@ -553,41 +581,68 @@ class OFF_RAMP_FIAT(APIView):
                         #     )
                 else:
                     transactionId = request.data.get("transaction_Id")
-                    if not transactionId:
-                        return Response({"error":"transaction_Id needed for this transaction"}, status=status.HTTP_400_BAD_REQUEST)
+                    if not transactionId or transactionId == None or transactionId == '':
+                        #accessing the widget directly without sep10 authorization
+                        transactionId = Id_generator()
+                        # return Response({"error":"transaction_Id needed for this transaction"}, status=status.HTTP_400_BAD_REQUEST)
                     try:
                         trx = TransactionsTable.objects.get(id=transactionId)
                     except (TransactionsTable.DoesNotExist):
-                        return Response({"error":"transaction_Id not found"}, status=status.HTTP_400_BAD_REQUEST)
-
-                    # print(trx)
-                    if trx.transaction_narration != ("sep"+transactionId):
-                        return Response({"error":"invalid transaction Id"}, status=status.HTTP_400_BAD_REQUEST)
-                    #update the sep transaction
-                    try:
-                        transaction_p = update_sep_transaction_no_ifp(
-                            transaction_Id=transactionId,
-                            transaction_amt=str(
-                                float(_data["amount"]) + float(GENERAL_TRANSACTION_FEE)
-                            ),
-                            transaction_type="withdraw",
-                            narration=_data["transaction_narration"],
-                            transaction_status="pending",
-                            phone_num=_data["phone_number"],
-                            user_bank_account=_data["account_number"],
-                            bank_name=_data["bank_name"],
-                            user_block_address=_data["blockchain_address"]
+                        #bushiness accessing widget without sep10
+                        # new transaction from the widget
+                        try:
+                            transaction_p = update_PendingTransaction_Model(
+                                transaction_amt=float(_data["amount"]) + float(GENERAL_TRANSACTION_FEE),
+                                transaction_type="withdraw",
+                                narration=_data["transaction_narration"],
+                                transaction_hash=None,
+                                user_block_address=_data["blockchain_address"],
+                                phone_num=_data["phone_number"],
+                                user_bank_account=_data["account_number"],
+                                bank_name=_data["bank_name"],
                             )
-                        print("insert", transaction_p)
-                        
-                    except IntegrityError as e:
-                        print(e)
-                        return Response(
-                            {
-                                "error": "there is a pending payment with this narration, please update transaction narration"
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
+
+
+                        except IntegrityError as e:
+                            print("this endpoint",e)
+
+                        # if "UNIQUE constraint failed" in e.args[0]:
+                            return Response(
+                                {
+                                    "error": "there is a pending payment with this narration, please update transaction narration"
+                                },
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
+                        # return Response({"error":"transaction_Id not found"}, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                    # print(trx)
+                        if trx.transaction_narration != ("sep"+transactionId):
+                            return Response({"error":"invalid transaction Id"}, status=status.HTTP_400_BAD_REQUEST)
+                        #update the sep transaction
+                        try:
+                            transaction_p = update_sep_transaction_no_ifp(
+                                transaction_Id=transactionId,
+                                transaction_amt=str(
+                                    float(_data["amount"]) + float(GENERAL_TRANSACTION_FEE)
+                                ),
+                                transaction_type="withdraw",
+                                narration=_data["transaction_narration"],
+                                transaction_status="pending",
+                                phone_num=_data["phone_number"],
+                                user_bank_account=_data["account_number"],
+                                bank_name=_data["bank_name"],
+                                user_block_address=_data["blockchain_address"]
+                                )
+                            print("insert", transaction_p)
+                            
+                        except IntegrityError as e:
+                            print(e)
+                            return Response(
+                                {
+                                    "error": "there is a pending payment with this narration, please update transaction narration"
+                                },
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
 
                 # else:
                 _resp_data = {}
@@ -1388,15 +1443,21 @@ class WEBAUTHENDPOINT(APIView):
                 "token":f"{token}"
             }, status=status.HTTP_200_OK)
 
-# @api_view(["GET"])
-# def sep24Withdrawal(request):
-# class Sep24SetUp(APIView):
-#     # get sep10 token
-#     renderer_classes = [TemplateHTMLRenderer]
-#     template_name = "Api/sep24.html"
-#     def get(self, requests):
-#         data = {"test": "ok"}
-#         return Response(data)
+class WidgetLinkDeposit(APIView):
+    # get sep10 token
+    renderer_classes = [TemplateHTMLRenderer]
+    template_name = "Api/widgetDeposit.html"
+    def get(self, requests):
+        data = {"test": "ok"}
+        return Response(data)
+        pass
+
+class WidgetLinkWithdrawal(APIView):
+    renderer_classes = [TemplateHTMLRenderer]
+    template_name = "Api/widgetWithdrawal.html"
+    def get(self, requests):
+        data = {"test": "ok"}
+        return Response(data)
     
 class Sep24DepositFlow(APIView):
     """
