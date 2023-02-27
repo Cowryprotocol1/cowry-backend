@@ -97,14 +97,12 @@ class User_Testing(TestSetUpClass):
             "account_number": "697079895",
             "phone_number": "670074567876",
             "transaction_narration": post_data.data["narration"],
-            "blockchain_address": self.request_data["blockchainAddress"],
-            "transaction_source":"protocol"
+            "blockchain_address": self.request_data["blockchainAddress"]
         }
 
 
         req_data = self.client.generic(method="POST", path=self.url, data=json.dumps(
             deposit_made_to_ma), content_type='application/json')
-        print("test restlt", req_data.json())
 
         self.assertTrue(req_data.status_code == 200)
         self.assertTrue(
@@ -296,8 +294,11 @@ class User_Testing(TestSetUpClass):
         self.url = reverse('withdrawal')
         _id = Id_generator()
         trx = baker.make(TransactionsTable, id=_id, transaction_narration=("sep"+_id))
+        self.user_withdrawal["transaction_source"] = "sep"
+        self.user_withdrawal["transaction_Id"] =trx.id
         req_data = self.client.generic(method="POST", path=self.url, data=json.dumps(
             self.user_withdrawal), content_type='application/json')
+        print(req_data.json())
         self.assertEqual(req_data.status_code, 200)
         self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
         self.assertTrue("blockchain_address" in req_data.data)

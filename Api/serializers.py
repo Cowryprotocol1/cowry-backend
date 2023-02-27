@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 #             raise serializers.ValidationError("Invalid Blockchain Address or Account not Created")
 #         return value
 def transaction_source_types(value):
-        transaction_source_choice = ['sep', 'protocol']
+        transaction_source_choice = ['sep']
         if value not in transaction_source_choice:
             raise serializers.ValidationError("invalid 'transaction_source', this can either be sep or protocol")
         return value
@@ -84,7 +84,7 @@ class Fiat_Off_RampSerializer(serializers.Serializer):
     data_created = serializers.DateTimeField(read_only=True)
     data_updated = serializers.DateTimeField(read_only=True)
     transaction_Id = serializers.CharField(max_length=20, min_length=10, allow_null=False, required=False)
-    transaction_source = serializers.CharField(max_length=10, allow_null=False, required=True, validators=[transaction_source_types], error_messages={"required":"transaction_source is a required field"})
+    transaction_source = serializers.CharField(max_length=10, allow_null=True, required=False, validators=[transaction_source_types], error_messages={"required":"transaction_source is a required field"})
 
 
 
@@ -94,7 +94,7 @@ class Fiat_On_RampSerializer(serializers.Serializer):
     blockchainAddress = serializers.CharField(
         validators=[check_stellar_address])
     narration = serializers.CharField(max_length=128)
-    transaction_source = serializers.CharField(max_length=10, allow_null=False, required=True, validators=[transaction_source_types], error_messages={"required":"transaction_source is a required field"})
+    transaction_source = serializers.CharField(max_length=10, allow_null=True, required=False, validators=[transaction_source_types], error_messages={"required":"transaction_source is a required field"})
     transaction_Id = serializers.CharField(max_length=20, min_length=10, allow_null=False, required=False)
         
 

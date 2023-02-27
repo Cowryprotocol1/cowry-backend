@@ -278,10 +278,12 @@ class ON_RAMP_FIAT_USERS(APIView):
                     # add filtering process for deposit and check for multiple deposit option
                     # print(MA_selected)
                     if MA_selected:
-                        transaction_src = check_data.validated_data["transaction_source"]
-                        if transaction_src == "protocol":
+                        transaction_src = request.data.get("transaction_source")
+                        # if transaction_src != "sep" :
+                        if transaction_src == None:
                             print("got inside protocol")
                             try:
+                                print("inside trx")
                                 update_pending_transaction_model(
                                     MA_selected["merchant"]["UID"],
                                     transaction_amt=str(
@@ -296,6 +298,7 @@ class ON_RAMP_FIAT_USERS(APIView):
                                     bank_name=MA_selected["merchant"]["bankName"],
                                     user_block_address=blockchainAddress,
                                 )
+                                print("done update")
                             except IntegrityError as e:
                                 # if "UNIQUE constraint failed" in e.args:
                                 return Response(
@@ -304,7 +307,7 @@ class ON_RAMP_FIAT_USERS(APIView):
                                     },
                                     status=status.HTTP_400_BAD_REQUEST,
                                 )
-                        elif transaction_src == "sep":
+                        if transaction_src and transaction_src == "sep":
                             print("inside sep")
                         
                             transactionId = request.data.get("transaction_Id")
@@ -353,8 +356,9 @@ class ON_RAMP_FIAT_USERS(APIView):
                         # update_cleared_uncleared_bal(
                         #     MA_selected["merchant"]["UID"], "uncleared", transactionFeeAmt
                         # )
+                        print("got outside")
 
-                        data = {
+                        s_data = {
                             "message": f"Send funds to account below with the following details, the correct amount to send is {float(amount) + float(GENERAL_TRANSACTION_FEE)}, please include your narration when making deposit in from your bank account",
                             "memo": MA_selected["merchant"]["UID"],
                             "amount": amount,
@@ -366,8 +370,8 @@ class ON_RAMP_FIAT_USERS(APIView):
                             "phoneNumber": MA_selected["merchant"]["phoneNumber"],
                             "eta": "5 minutes",
                         }
-
-                        return Response(data=data, status=status.HTTP_200_OK)
+                        print("return this data", s_data)
+                        return Response(data=s_data, status=status.HTTP_200_OK)
                     else:
                         return Response(
                             data={
@@ -514,7 +518,9 @@ class OFF_RAMP_FIAT(APIView):
                 # if any users has a balance, then their is a merchant with debt to the protocol
                 # we can easily process payment just by checking a users balance
                 # we should probably check with server to make sure there is a merchant with debt
-                if serializer.validated_data['transaction_source'] != "sep":
+                transaction_src = request.data.get("transaction_source")
+                
+                if transaction_src == None:
                     try:
 
                         transaction_p = update_PendingTransaction_Model(
