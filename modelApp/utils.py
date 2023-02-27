@@ -191,6 +191,9 @@ def update_pending_transaction_model(
     user_bank_account=None,
     bank_name=None,
 ):
+    """
+    this is used to assign merchant to a pending transaction while updating the transaction details
+    """
     merchant_obj = MerchantsTable.objects.get(UID=merchant)
     if transaction_type == "deposit":
         a1 = TransactionsTable(
@@ -309,7 +312,103 @@ def update_transaction_status(transaction_id: str, status: str) -> bool:
     else:
         return True
 
-    pass
+def insert_sep_transaction(transaction_Id:str, transaction_type:str, 
+    transaction_amt: str,
+    narration: str,
+    transaction_status: str,
+    transaction_hash=None,
+    transaction_memo=None,
+    user_block_address=None,
+    phone_num=None,
+    email=None,
+    user_bank_account=None,
+    bank_name=None):
+    a1 = TransactionsTable(
+        id=transaction_Id,
+        users_address=user_block_address,
+        transaction_type=transaction_type,
+        transaction_amount=transaction_amt,
+        transaction_hash=transaction_hash,
+        transaction_memo=transaction_memo,
+        user_phone=phone_num,
+        user_email=email,
+        user_bank_account=user_bank_account,
+        user_bank_name=bank_name,
+        transaction_narration=narration,
+        transaction_status=transaction_status,
+    )
+    a1.save()
+    return a1
+
+def update_sep_transaction(transaction_Id:str, merchant_id:str, transaction_type:str, 
+    transaction_amt: str,
+    narration: str,
+    transaction_status: str,
+    transaction_hash=None,
+    transaction_memo=None,
+    user_block_address=None,
+    phone_num=None,
+    email=None,
+    user_bank_account=None,
+    bank_name=None):
+    """
+    used to add a sep transaction to the db, this assign a merchant to the transaction and is mainly used for depoist
+    """
+    # print(transaction_amt,merchant_id, transaction_hash, narration, transaction_status, transaction_memo, user_block_address, phone_num, email, user_bank_account, bank_name)
+    # merchant_obj = MerchantsTable.objects.get(UID=merchant_id)
+    merchant_obj = MerchantsTable.objects.get(UID=merchant_id)
+
+    _transaction = TransactionsTable.objects.filter(id=transaction_Id).update(
+        users_address=user_block_address,
+        transaction_type=transaction_type,
+        transaction_amount=transaction_amt,
+        transaction_hash=transaction_hash,
+        transaction_memo=transaction_memo,
+        user_phone=phone_num,
+        user_email=email,
+        user_bank_account=user_bank_account,
+        user_bank_name=bank_name,
+        transaction_narration=narration,
+        transaction_status=transaction_status,
+
+    )
+    transaction_obj = TransactionsTable.objects.get(id=transaction_Id)
+    transaction_obj.merchant.add(merchant_obj)
+    return transaction_obj
+
+def update_sep_transaction_no_ifp(transaction_Id:str, transaction_type:str,
+    transaction_amt: str,
+    narration: str,
+    transaction_status: str,
+    transaction_hash=None,
+    transaction_memo=None,
+    user_block_address=None,
+    phone_num=None,
+    email=None,
+    user_bank_account=None,
+    bank_name=None):
+    """
+    This is used to update a transaction by adding a merchant or other details to a pending transaction
+    mainly used for withdrawal
+    """
+    _transaction = TransactionsTable.objects.filter(id=transaction_Id).update(
+        users_address=user_block_address,
+        transaction_type=transaction_type,
+        transaction_amount=transaction_amt,
+        transaction_hash=transaction_hash,
+        transaction_memo=transaction_memo,
+        user_phone=phone_num,
+        user_email=email,
+        user_bank_account=user_bank_account,
+        user_bank_name=bank_name,
+        transaction_narration=narration,
+        transaction_status=transaction_status,
+
+    )
+    transaction_obj = TransactionsTable.objects.get(id=transaction_Id)
+
+    return transaction_obj
+
 
 
 def remove_transaction_from_merchants_model(

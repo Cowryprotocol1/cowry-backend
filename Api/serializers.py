@@ -10,7 +10,11 @@ from django.core.exceptions import ValidationError
 #         if not is_account_valid(value):
 #             raise serializers.ValidationError("Invalid Blockchain Address or Account not Created")
 #         return value
-
+def transaction_source_types(value):
+        transaction_source_choice = ['sep', 'protocol']
+        if value not in transaction_source_choice:
+            raise serializers.ValidationError("invalid 'transaction_source', this can either be sep or protocol")
+        return value
 
 def check_account_numberLen(value):
     if len(value) == 10:
@@ -50,7 +54,7 @@ class EventSerializer(serializers.Serializer):
 
 
     
-    
+
 
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -79,6 +83,10 @@ class Fiat_Off_RampSerializer(serializers.Serializer):
     transaction_narration = serializers.CharField(max_length=128)
     data_created = serializers.DateTimeField(read_only=True)
     data_updated = serializers.DateTimeField(read_only=True)
+    transaction_Id = serializers.CharField(max_length=20, min_length=10, allow_null=False, required=False)
+    transaction_source = serializers.CharField(max_length=10, allow_null=False, required=True, validators=[transaction_source_types], error_messages={"required":"transaction_source is a required field"})
+
+
 
 class Fiat_On_RampSerializer(serializers.Serializer):
     amount = serializers.FloatField(min_value=1000.0)
@@ -86,19 +94,30 @@ class Fiat_On_RampSerializer(serializers.Serializer):
     blockchainAddress = serializers.CharField(
         validators=[check_stellar_address])
     narration = serializers.CharField(max_length=128)
+    transaction_source = serializers.CharField(max_length=10, allow_null=False, required=True, validators=[transaction_source_types], error_messages={"required":"transaction_source is a required field"})
+    transaction_Id = serializers.CharField(max_length=20, min_length=10, allow_null=False, required=False)
+        
+
 
 
 class Sep6DepositSerializer(serializers.Serializer):
     asset_code = serializers.CharField(
         max_length=20, min_length=3, required=True, allow_null=False, validators=[check__asset_code_For_stable])
+    
+    asset_issuer = serializers.CharField(
+        max_length=56, min_length=56, required=False, validators=[check_stellar_address])
     account = serializers.CharField(
-        min_length=56, max_length=56, required=True, allow_null=False)
-    amount = serializers.FloatField(allow_null=True, required=True, min_value=1000.0)
+        min_length=56, max_length=56, required=False, allow_null=False)
+    amount = serializers.FloatField(allow_null=True, required=False, error_messages={"min_value":"minimum amount for withdrawal is 1000", "required":"this is a required field"}, min_value=1000.0)
     memo_type = serializers.CharField(allow_blank=True,
         max_length=56, min_length=2, required=False)
     memo = serializers.CharField(allow_blank=True, required=False,
         max_length=56, min_length=2)
     email = serializers.EmailField(allow_blank=True, required=False)
+    wallet_name = serializers.CharField(allow_null=True, required=False, min_length=1, max_length=100)
+    wallet_url = serializers.CharField(allow_null=True, required=False, min_length=1, max_length=100)
+    lang = serializers.CharField(allow_null=True, required=False, min_length=1, max_length=100)
+    claimable_balance_supported = serializers.BooleanField(required=False)
     
 
 class Sep6WithdrawalSerializer(serializers.Serializer):
