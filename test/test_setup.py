@@ -183,7 +183,8 @@ class TestSetUpClass(APITestCase):
             "amount": 1000,
             "blockchainAddress": self.general_keypair.public_key,
             "bankType": "FBN",
-            "narration": "payment for utilities"
+            "narration": "payment for utilities",
+            "transaction_source":"protocol"
         }
 
         self.deposit_made_to_ma = {
@@ -203,7 +204,9 @@ class TestSetUpClass(APITestCase):
             "name_on_acct": "test man",
             "phone_number": "09067589358",
             "blockchain_address": self.general_keypair.public_key,
-            "transaction_narration": "withdraw 7747"
+            "transaction_narration": "withdraw 7747",
+            "transaction_source":"protocol"
+
         }
 
         self.onboarding_details = {
