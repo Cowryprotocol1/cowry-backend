@@ -129,8 +129,8 @@ SEP_INFO = {
         },
         "fee": {"enabled": True},
         "account_creation": {"enable": False},
-        "transactions": {"enabled": True, "authentication_required": False},
-        "transaction": {"enabled": False, "authentication_required": False},
+        "transactions": {"enabled": False, "authentication_required": False},
+        "transaction": {"enabled": True, "authentication_required": False},
     },
 }
 
@@ -1331,7 +1331,7 @@ def Sep6Deposit(requests):
 
 @api_view(["GET"])
 def sepInfo(requests):
-    return Response(SEP_INFO)
+    return JsonResponse(SEP_INFO)
 
 
 @api_view(["GET"])
