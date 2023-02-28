@@ -697,7 +697,7 @@ def generate_jwt(challenge, client_domain):
         challenge,
         Keypair.from_secret(DELEGATED_SIGNER_ADDRESS).public_key,
         DOMAIN,
-        os.path.join(DOMAIN, "auth"),
+        DOMAIN,
         get_network_passPhrase(),
     )
 
@@ -707,7 +707,7 @@ def generate_jwt(challenge, client_domain):
         sub = f"{read_xdr.client_account_id}:{read_xdr.memo}"
     issued_at = read_xdr.transaction.transaction.preconditions.time_bounds.min_time
     jwt_dict = {
-        "iss": os.path.join(DOMAIN, "auth"),
+        "iss": DOMAIN,
         "sub": sub,
         "iat": issued_at,
         "exp": issued_at + 24 * 60 * 60,
