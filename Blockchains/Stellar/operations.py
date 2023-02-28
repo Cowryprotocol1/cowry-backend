@@ -595,10 +595,11 @@ def submit_feeBump_transaction(transaction_xdr):
     return sent_fee_block
 
 
-def build_challenge_tx(server_key:str,
+def build_challenge_tx(
+        server_key:str,
         client_key:str,
         client_domain:str,
-        _web_auth_domain=os.path.join(DOMAIN, "auth")):
+        _web_auth_domain=DOMAIN):
     
     # Server builds challenge transaction
     challenge_tx = build_challenge_transaction(server_secret=server_key, client_account_id=client_key, home_domain=client_domain, web_auth_domain=_web_auth_domain, network_passphrase=get_network_passPhrase())
