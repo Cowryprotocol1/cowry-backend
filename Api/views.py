@@ -1,5 +1,6 @@
 import logging
 import os
+from urllib.parse import urlparse
 
 from Blockchains.Stellar.operations import (
     ALLOWED_AND_LICENSE_P_ADDRESS,
@@ -1450,7 +1451,6 @@ class WidgetLinkDeposit(APIView):
     def get(self, requests):
         data = {"test": "ok"}
         return Response(data)
-        pass
 
 class WidgetLinkWithdrawal(APIView):
     renderer_classes = [TemplateHTMLRenderer]
@@ -1469,11 +1469,14 @@ class Sep24DepositFlow(APIView):
         sep24data = Sep6DepositSerializer(data=request.data)
         if sep24data.is_valid():
             _id = Id_generator()
+            url_= request.build_absolute_uri()
+            pares_url = urlparse(url_)
+            
+            sep_url = pares_url.scheme + "://" + pares_url.netloc +"/widgetDeposit"
             data = insert_sep_transaction(_id, transaction_type="deposit", transaction_amt=0, narration=("sep" + str(_id)), transaction_status="Pending")
             data = {
                 "type": "interactive_customer_info_needed",
-                # "url" : f"https://cowryprotocol.io/deposit?transaction_id={_id}&asset_code={STABLECOIN_CODE}&asset_issuer={STABLECOIN_ISSUER}&account={request.data.get('account')}",
-                "url":f"http://127.0.0.1:5173/deposit?transaction_id={_id}&asset_code={STABLECOIN_CODE}&asset_issuer={STABLECOIN_ISSUER}&account={request.data.get('account')}",
+                "url":f"{sep_url}/deposit?transaction_id={_id}&asset_code={STABLECOIN_CODE}&asset_issuer={STABLECOIN_ISSUER}&account={request.data.get('account')}",
                 #this should then open up url to the widget model, from here we can stick to the flow for the deposit from the protocol endpoint
                 "id": f"{_id}"
                 }
@@ -1524,10 +1527,14 @@ class Sep24WithdrawalFlow(APIView):
         sep24data = Sep6DepositSerializer(data=request.data)
         if sep24data.is_valid():
             _id = Id_generator()
+            url_= request.build_absolute_uri()
+            pares_url = urlparse(url_)
+            
+            sep_url = pares_url.scheme + "://" + pares_url.netloc +"/widgetWithdrawal"
             data = insert_sep_transaction(_id, transaction_type="withdraw", transaction_amt=0, narration=("sep" + str(_id)), transaction_status="Pending")
             data = {
                 "type": "interactive_customer_info_needed",
-                "url":f"http://127.0.0.1:5173/withdrawal?transaction_id={_id}&asset_code={STABLECOIN_CODE}&asset_issuer={STABLECOIN_ISSUER}&account={request.data.get('account')}",
+                "url":f"{sep_url}/withdrawal?transaction_id={_id}&asset_code={STABLECOIN_CODE}&asset_issuer={STABLECOIN_ISSUER}&account={request.data.get('account')}",
                 #this should then open up url to the widget model, from here we can stick to the flow for the deposit from the protocol endpoint
                 "id": f"{_id}"
                 }
