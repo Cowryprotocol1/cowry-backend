@@ -6,6 +6,8 @@ NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
 TRANSFER_SERVER = "https://cowry-backend.herokuapp.com/sep6"
 WEB_AUTH_ENDPOINT = "https://cowry-backend.herokuapp.com/auth"
 TRANSFER_SERVER_SEP0024 = "https://cowry-backend.herokuapp.com/sep24"
+SIGNING_KEY ="GCFXIUSRK5FSJY2ZKGRNR5Y2DNVXH7EA3D3GAY4HBPPKHMLSLRN55S6X"
+
 
 [DOCUMENTATION]
 ORG_NAME="Cowry Protocol"
