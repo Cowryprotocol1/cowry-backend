@@ -1432,7 +1432,7 @@ class WEBAUTHENDPOINT(APIView):
         if envelope_xdr:
             try:
                 auth_domain = os.path.join(DOMAIN, "auth")
-                adc, client_domain = server_verify_challenge(challenge=envelope_xdr, home_domain=DOMAIN, web_auth_domain=auth_domain)
+                adc, client_domain = server_verify_challenge(challenge=envelope_xdr, home_domain=DOMAIN, web_auth_domain=DOMAIN)
             except Exception as error:
                 print("this error")
                 print(error.args[0])
