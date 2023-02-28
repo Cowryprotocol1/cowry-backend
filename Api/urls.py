@@ -26,7 +26,7 @@ urlpatterns = [
     path("sep24/transactions/deposit/interactive", Sep24DepositFlow.as_view(), name="sep24 Deposit"),
     path("sep24/transactions/withdraw/interactive", Sep24WithdrawalFlow.as_view(), name="sep24 withdrawal"),
     
-    path("transaction", Sep24InfoEndpoint.as_view(), name="Sep Transaction Info"),
+    re_path(r"^sep24/transaction", Sep24TransactionEndpoint.as_view(), name="Sep Transaction Info"),
     re_path(r'^widgetDeposit/', WidgetLinkDeposit.as_view(), name="Withdrawal"),
     re_path(r"^widgetWithdrawal", WidgetLinkWithdrawal.as_view(), name="Withdrawal"),
 

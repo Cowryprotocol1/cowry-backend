@@ -1489,12 +1489,13 @@ class Sep24DepositFlow(APIView):
         # print("this is the endpoint that was called")
         # return Response(template_name = "Api/sep24.html")
 
-class Sep24InfoEndpoint(APIView):
+class Sep24TransactionEndpoint(APIView):
     def get(self, request, *args, **kwargs):
         
         transactionId = self.request.query_params.get("id")
         ex_transactionId = self.request.query_params.get("stellar_transaction_id")
         in_transactionId = self.request.query_params.get("external_transaction_id")
+        print(transactionId)
 
         if transactionId is None:
             return Response({ "error": "this query requires an 'id' "}, status=status.HTTP_400_BAD_REQUEST)
@@ -1505,22 +1506,27 @@ class Sep24InfoEndpoint(APIView):
             return Response({"error":"invalid transaction Id "}, status=status.HTTP_400_BAD_REQUEST)
         
         # print(transaction)
-        transaction_data = transaction.values(
-            transaction_id=F("merchant"),
-            kind=F("transaction_type"),
-            status=F("transaction_status"),
-            started_at = F("created_at"),
-            amount = F("transaction_amount")
-        )
-        transaction = transaction_data[0]
-        _data = {}
-        _data["eta"] = 3600
-        _data["external_transaction_id"] = None
-        _data["amount_fee"]= GENERAL_TRANSACTION_FEE
-        transaction.update(_data)
+        if transaction:
+            transaction_data = transaction.values(
+                transaction_id=F("merchant"),
+                kind=F("transaction_type"),
+                status=F("transaction_status"),
+                started_at = F("created_at"),
+                amount = F("transaction_amount")
+            )
+            print("this is oit")
+            print(transaction_data)
+            transaction = transaction_data[0]
+            _data = {}
+            _data["eta"] = 3600
+            _data["external_transaction_id"] = None
+            _data["amount_fee"]= GENERAL_TRANSACTION_FEE
+            transaction.update(_data)
 
-        return  JsonResponse({"transaction":transaction}, safe=False, status=status.HTTP_200_OK)
-    
+            return  JsonResponse({"transaction":transaction}, safe=False, status=status.HTTP_200_OK)
+        else:
+            return Response({"error":"invalid transaction Id "}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class Sep24WithdrawalFlow(APIView):
     def post(self, request, *args, **kwargs):
