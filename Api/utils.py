@@ -55,7 +55,7 @@ def amount_to_naira(amount):
     # we might need to add a qoute column to db to store the qoute price an MA naira was minted
     print(amount)
     price_url = "https://api.binance.com/api/v3/avgPrice?symbol=USDTNGN"
-    response = requests.get(price_url, verify=False)
+    response = requests.get(price_url)
     if response.status_code == 200:
         print(response.json())
         print(response.json()["price"])
