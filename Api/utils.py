@@ -113,16 +113,19 @@ def isTransaction_Valid(
                         print("got inside")
                         try:
                             [mint_amt, price] = amount_to_naira(amt)
+                            print("this is mint", mint_amt, price)
                             update_balance_details = (
                                         update_merchant_by_allowedLicenseAmount(
                                             memo, mint_amt, amt, price, transaction_hash
                                         )
                                     )
+                            print("update_balance_details", update_balance_details)
 
                             if update_balance_details == True:
-                                    Mint_Token(
+                                    mint_token = Mint_Token(
                                         sender, round(float(mint_amt), 7), str(memo)
                                     )
+                                    print("Mint_Token", mint_token)
                             else:
                                 print("Transaction failed")
                                 # Transaction failed, send notification to admin group
