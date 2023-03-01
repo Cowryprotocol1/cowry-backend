@@ -317,16 +317,35 @@ def Notifications(recipient_email, subject, message):
     """
     Use to notify an email about the status of a transaction
     """
-    return requests.post(
-        "https://api.mailgun.net/v3/sentit.io/messages",
-        auth=("api", config("MAILGUN_API_KEY")),
-        data={
-            "from": "<noreply@sentit.io>",
-            "to": [f"{recipient_email}", "sentit.io"],
-            "subject": subject,
-            "text": message,
-        },
-    )
+    import os
+    from sendgrid import SendGridAPIClient
+    from sendgrid.helpers.mail import Mail
+    from decouple import config as env
+    print(env('SENDGRID_API_KEY'))
+
+    message = Mail(
+        from_email='admin@cowryprotocol.io',
+        to_emails=recipient_email,
+        subject=subject,
+        html_content=message)
+    try:
+        sg = SendGridAPIClient(env('SENDGRID_API_KEY'))
+        response = sg.send(message)
+        print(response.status_code)
+        print(response.body)
+        print(response.headers)
+    except Exception as e:
+        print(e.message)
+    # return requests.post(
+    #     "https://api.mailgun.net/v3/sentit.io/messages",
+    #     auth=("api", config("MAILGUN_API_KEY")),
+    #     data={
+    #         "from": "<noreply@sentit.io>",
+    #         "to": [f"{recipient_email}", "sentit.io"],
+    #         "subject": subject,
+    #         "text": message,
+    #     },
+    # )
 
 
 # mail = Notifications("sundayafolabi992@gmail.com")
