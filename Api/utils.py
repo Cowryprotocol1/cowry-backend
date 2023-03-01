@@ -53,13 +53,17 @@ def amount_to_naira(amount):
     # Convert amount to Naira
     # Using binance API
     # we might need to add a qoute column to db to store the qoute price an MA naira was minted
+    print(amount)
     price_url = "https://api.binance.com/api/v3/avgPrice?symbol=USDTNGN"
     response = requests.get(price_url, verify=False)
     if response.status_code == 200:
+        print(response.json())
+        print(response.json()["price"])
         price = round(float(response.json()["price"]), 7)
         naira_amount = round(float(amount) * float(price), 7)
 
         to_mint_amt = naira_amount * IFP_STAKE_MINT_VALUE
+        print("this is inside", to_mint_amt, price)
         return [to_mint_amt, price]
     return
 
