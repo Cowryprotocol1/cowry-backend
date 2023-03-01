@@ -12,6 +12,7 @@ app = Celery('stablecoin', broker_use_ssl = {
         'ssl_cert_reqs': ssl.CERT_NONE
      })
 
+# app = Celery('stablecoin')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
 app.autodiscover_tasks()
