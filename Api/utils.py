@@ -54,7 +54,7 @@ def amount_to_naira(amount):
     # Using binance API
     # we might need to add a qoute column to db to store the qoute price an MA naira was minted
     price_url = "https://api.binance.com/api/v3/avgPrice?symbol=USDTNGN"
-    response = requests.get(price_url)
+    response = requests.get(price_url, verify=False)
     if response.status_code == 200:
         price = round(float(response.json()["price"]), 7)
         naira_amount = round(float(amount) * float(price), 7)
@@ -112,6 +112,7 @@ def isTransaction_Valid(
                     if recipient_add == STAKING_ADDRESS:
                         print("got inside")
                         try:
+                            print("got to the top")
                             [mint_amt, price] = amount_to_naira(amt)
                             print("this is mint", mint_amt, price)
                             update_balance_details = (
