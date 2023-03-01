@@ -56,6 +56,9 @@ def amount_to_naira(amount):
     print(amount)
     price_url = "https://api.binance.com/api/v3/avgPrice?symbol=USDTNGN"
     response = requests.get(price_url)
+    print(response.content)
+    print(response.status_code)
+    print(response.content.decode())
     if response.status_code == 200:
         print(response.json())
         print(response.json()["price"])
