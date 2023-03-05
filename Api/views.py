@@ -1508,14 +1508,13 @@ class Sep24TransactionEndpoint(APIView):
         # print(transaction)
         if transaction:
             transaction_data = transaction.values(
-                transaction_id=F("merchant"),
+                transaction_id=F("id"),
                 kind=F("transaction_type"),
                 status=F("transaction_status"),
                 started_at = F("created_at"),
                 amount = F("transaction_amount")
             )
-            print("this is oit")
-            print(transaction_data)
+            
             transaction = transaction_data[0]
             _data = {}
             _data["eta"] = 3600

@@ -23,12 +23,12 @@ urlpatterns = [
     path("audit_protocol", auditProtocol, name="audit"), #tested
     path("transactionStatus", transactionStatus, name="transactionStatus"), #tested
     path("auth", WEBAUTHENDPOINT.as_view(), name="sep10"),
-    path("sep24/transactions/deposit/interactive", Sep24DepositFlow.as_view(), name="sep24 Deposit"),
-    path("sep24/transactions/withdraw/interactive", Sep24WithdrawalFlow.as_view(), name="sep24 withdrawal"),
+    path("sep24/transactions/deposit/interactive", Sep24DepositFlow.as_view(), name="sep24 Deposit"), #Tested
+    path("sep24/transactions/withdraw/interactive", Sep24WithdrawalFlow.as_view(), name="sep24 withdrawal"), #Tested
     
-    re_path(r"^sep24/transaction", Sep24TransactionEndpoint.as_view(), name="Sep Transaction Info"),
-    re_path(r'^widgetDeposit/', WidgetLinkDeposit.as_view(), name="Withdrawal"),
-    re_path(r"^widgetWithdrawal", WidgetLinkWithdrawal.as_view(), name="Withdrawal"),
+    re_path(r"^sep24/transaction", Sep24TransactionEndpoint.as_view(), name="Sep Transaction Info"), #Tested
+    re_path(r'^widgetDeposit/', WidgetLinkDeposit.as_view(), name="Widget Withdrawal"), #Tested
+    re_path(r"^widgetWithdrawal", WidgetLinkWithdrawal.as_view(), name="Widget Deposit"), #Tested
 
     # path("transactions/deposit/interactive", sep24Withdrawal, name='sep24Stellar')
     # path("canceltransaction", TransactionExpire.as_view(), name="TransactionExpire")

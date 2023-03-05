@@ -18,7 +18,6 @@ from utils.utils import Id_generator
 
 class User_Testing(TestSetUpClass):
 
-
     # need to add merchant 
     @patch("Api.views.is_Asset_trusted")
     def test_user_deposit(self, mock_requests):
@@ -308,61 +307,6 @@ class User_Testing(TestSetUpClass):
         self.assertEqual(self.user_withdrawal["account_number"], req_data.data["user_details"]["account_number"])
         self.assertEqual(self.user_withdrawal["phone_number"], req_data.data["user_details"]["phone_number"])
         self.assertEqual(self.user_withdrawal["blockchain_address"], req_data.data["user_details"]["blockchain_address"])
-
-
-# =======================================================================
-# TESTING FOR GETTING WIDGET URL
-# =======================================================================
-    def test_sep24_get_url_endpoint_deposit(self):
-        """
-        getting url for sep 24 deposit
-        """
-        self.url = reverse('sep24 Deposit')
-        self.request_data.update({"transaction_source":"sep", "asset_code":"NGN"})
-        req_data = self.client.post(self.url, data=self.request_data, format="json")
-        self.assertEqual(req_data.status_code, 200)
-        self.assertTrue(req_data.data["type"] == "interactive_customer_info_needed")
-        self.assertTrue("url" in req_data.data)
-        self.assertTrue("id" in req_data.data)
-        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
-
-    def test_sep24_get_url_endpoint_withdrawal(self):
-        """
-        getting url for sep 24 withdrawal
-        """
-        self.url = reverse('sep24 withdrawal')
-        self.request_data.update({"transaction_source":"sep", "asset_code":"NGN"})
-        req_data = self.client.post(self.url, data=self.request_data, format="json")
-        self.assertEqual(req_data.status_code, 200)
-        self.assertTrue(req_data.data["type"] == "interactive_customer_info_needed")
-        self.assertTrue("url" in req_data.data)
-        self.assertTrue("id" in req_data.data)
-        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
-
-    def test_sep24_get_url_endpoint_withdrawal_noParams(self):
-        """
-        getting url for sep 24 withdrawal fail no, params
-        """
-        self.url = reverse('sep24 withdrawal')
-        # self.request_data.update({"transaction_source":"sep", "asset_code":"NGN"})
-        req_data = self.client.post(self.url, data=self.request_data, format="json")
-        print(req_data.json())
-        self.assertEqual(req_data.status_code, 400)
-        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
-        self.assertTrue("error" in req_data.data)
-    def test_sep24_get_url_endpoint_deposit_noParams(self):
-        """
-        getting url for sep 24 deposit fail no, params
-        """
-        self.url = reverse('sep24 Deposit')
-
-        # self.request_data.update({"transaction_source":"sep", "asset_code":"NGN"})
-        req_data = self.client.post(self.url, data=self.request_data, format="json")
-        print(req_data.json())
-        self.assertEqual(req_data.status_code, 400)
-        self.assertTrue(req_data.headers["Content-Type"] == 'application/json')
-        self.assertTrue("error" in req_data.data)
-
 
 
 

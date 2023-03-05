@@ -22,7 +22,7 @@ class Deployment():
     """
 # SC25HPC4M2DA6SVZNCYDKZA5PQEXDVIYPI7ETPEWLM3KUHOVKBELWSSV
 # GAMMNDTABDTWRRGI2JPYHYPBPQUSN6FYPSW4QGIWMP73ARTORV2YDJUB
-    def __init__(self, _horizon_network, _genesis_signer="SC25HPC4M2DA6SVZNCYDKZA5PQEXDVIYPI7ETPEWLM3KUHOVKBELWSSV",) -> None:
+    def __init__(self, _horizon_network, _genesis_signer="SCJ4XLGLNL2VIDOSVRTYYY7NGDNC5XOQNSSRAH44I4SNVRXFS3NBH6QG",) -> None:
         self.Keys_to_create = {}
         self.NETWORK = _horizon_network
         self.Genesis_acct = _genesis_signer
