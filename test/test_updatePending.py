@@ -1,5 +1,5 @@
 # from rest_framework.test import APITestCase
-from test_setup import TestSetUpClass
+from .test_setup import TestSetUpClass
 from modelApp.utils import update_PendingTransaction_Model
 
 class TestUpdatePendingTransactionModel(TestSetUpClass):

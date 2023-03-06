@@ -1,7 +1,7 @@
 # from rest_framework.test import APITestCase
 from rest_framework import status
 from model_bakery import baker
-from test_setup import TokenTable, TestSetUpClass
+from .test_setup import TokenTable, TestSetUpClass
 from rest_framework.test import APITestCase
 
 from rest_framework import status

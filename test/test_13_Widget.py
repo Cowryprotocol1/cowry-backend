@@ -1,4 +1,4 @@
-from test_setup  import TestSetUpClass
+from .test_setup  import TestSetUpClass
 from django.urls import reverse
 # from Api.templates.Api import widget
 

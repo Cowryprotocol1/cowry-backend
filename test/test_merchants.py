@@ -7,7 +7,7 @@ from rest_framework import status
 from stellar_sdk import Payment, SetTrustLineFlags, TransactionEnvelope
 from stellar_sdk.keypair import Keypair
 
-from test_setup import (TestSetUpClass, allowed_asset, allowed_asset_issuer,
+from .test_setup import (TestSetUpClass, allowed_asset, allowed_asset_issuer,
                         license_token, stablecoin, staking_address,
                         staking_asset_code, staking_asset_issuer, license_token_issuer, stablecoin_issuer)
 

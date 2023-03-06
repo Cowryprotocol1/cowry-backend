@@ -3,10 +3,8 @@
 # Test withdrawal from the protocol
 # 
 import json
-from test_setup import TestSetUpClass, stablecoin, stablecoin_issuer, stablecoin_signer, staking_asset_issuer, staking_asset_code
+from .test_setup import TestSetUpClass
 from django.urls import reverse
-from stellar_sdk.keypair import Keypair
-from modelApp.models import MerchantsTable
 from unittest.mock import patch
 from modelApp.models import TransactionsTable
 from model_bakery import baker

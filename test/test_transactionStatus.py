@@ -1,5 +1,5 @@
 import json
-from test_setup import TestSetUpClass
+from .test_setup import TestSetUpClass
 from unittest.mock import patch
 from django.urls import reverse
 

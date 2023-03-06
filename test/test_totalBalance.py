@@ -1,8 +1,6 @@
-from lib2to3.pgen2 import token
-from test_setup import TestSetUpClass
+from .test_setup import TestSetUpClass
 from django.urls import reverse
 import json
-from modelApp.models import TokenTable
 from unittest.mock import patch
 
 

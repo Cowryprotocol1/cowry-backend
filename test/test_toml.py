@@ -1,7 +1,7 @@
-from unittest.mock import patch
-from test_setup import TestSetUpClass
+
+from .test_setup import TestSetUpClass
 from django.urls import reverse
-import json, toml
+import toml
 
 
 
