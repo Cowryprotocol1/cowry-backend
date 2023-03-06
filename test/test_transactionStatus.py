@@ -66,9 +66,10 @@ class TransactionStatusTest(TestSetUpClass):
             },
         },
     ]
-
+    @patch("Api.views.isTransaction_Valid.delay")
     @patch("Api.views.getStellar_tx_fromMemo")
-    def test_valid_transaction_id_withdrawal(self, mock_transaction):
+    def test_valid_transaction_id_withdrawal(self, mock_transaction, mock_queu):
+        mock_queu.return_value = "ok"
         mock_transaction.return_value = self.mock_data
         # Send a POST request to the API with a valid transaction ID for a withdrawal transaction
         response = self.client.post(
@@ -83,8 +84,10 @@ class TransactionStatusTest(TestSetUpClass):
             json.loads(response.content),
             {"msg": "we are updating your balance right away", "status": "success"},
         )
+    @patch("Api.views.isTransaction_Valid.delay")
     @patch("Api.views.getStellar_tx_fromMemo")
-    def test_valid_transaction_id_staking(self, mock_transaction):
+    def test_valid_transaction_id_staking(self, mock_transaction, mock_queu):
+        mock_queu.return_value = "ok"
         mock_transaction.return_value = self.mock_data
         # Send a POST request to the API with a valid transaction ID for a withdrawal transaction
         response = self.client.post(
@@ -99,9 +102,10 @@ class TransactionStatusTest(TestSetUpClass):
             json.loads(response.content),
             {"msg": "we are updating your balance right away", "status": "success"},
         )
-
+    @patch("Api.views.isTransaction_Valid.delay")
     @patch("Api.views.getStellar_tx_fromMemo")
-    def test_invalid_transaction_id(self, mock_transaction):
+    def test_invalid_transaction_id(self, mock_transaction, mock_queu):
+        mock_queu.return_value = "ok"
         mock_transaction.return_value =[]
         # Send a POST request to the API with an invalid transaction ID
         response = self.client.post(

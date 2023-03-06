@@ -32,7 +32,7 @@ jobs:
           echo DB_PASSWORD='' >> .env
           echo DB_HOST='' >> .env
           echo DB_PORT='' >> .env
-          echo COWRY_DEFAULT_DOMAIN="test.cowryprotocol.com" >> .env
+          echo COWRY_DEFAULT_DOMAIN="cowry-backend.herokuapp.com" >> .env
           
 
 
