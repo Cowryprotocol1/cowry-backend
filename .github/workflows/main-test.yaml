@@ -49,7 +49,6 @@ jobs:
           echo NETWORK_TYPE = "Testnet" >> .env
           echo DB_URI="mysql+pymysql://root:@localhost/testing" >> .env
 
-
           echo BILL_PAY_PASSWORD="Test_bill_password" >> .env
           echo BILL_PAY_EMAIL="Test_bill_email" >> .env
           cat .env
