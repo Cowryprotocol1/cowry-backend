@@ -82,9 +82,11 @@ class User_Testing(TestSetUpClass):
 # ============================================================================
             # test user send payment to merchant
 # ============================================================================
+    @patch("Api.views.Notifications")
     @patch("Api.views.is_Asset_trusted")
-    def test_user_made_deposit_to_MA_account_with_correct_details(self, mock_requests):
+    def test_user_made_deposit_to_MA_account_with_correct_details(self, mock_requests, mock_notification):
         mock_requests.return_value =[True, 10000]
+        mock_notification.return_value = [True, 'ok']
         self.url = reverse('deposit')
         post_data = self.client.post(
             self.url, data=self.request_data, format="json")
@@ -102,6 +104,7 @@ class User_Testing(TestSetUpClass):
 
         req_data = self.client.generic(method="POST", path=self.url, data=json.dumps(
             deposit_made_to_ma), content_type='application/json')
+        print(req_data.json())
 
         self.assertTrue(req_data.status_code == 200)
         self.assertTrue(
