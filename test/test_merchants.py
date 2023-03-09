@@ -79,7 +79,7 @@ class MerchantsTest(TestSetUpClass):
         }
 
         # use self.client.generic when you need to pass data into your get request
-        req_data=self.client.generic(method="GET", path=self.url, data= json.dumps(self._ma_data), content_type='application/json')
+        req_data=self.client.generic(method="POST", path=self.url, data= json.dumps(self._ma_data), content_type='application/json')
         self.assertEqual(req_data.status_code, status.HTTP_200_OK)
         self.assertTrue("raw_xdr" in req_data.data)
         self.assertTrue(
@@ -94,7 +94,7 @@ class MerchantsTest(TestSetUpClass):
         self.url = reverse('offboard')
 
         # use self.client.generic when you need to pass data into your get request
-        req_data=self.client.generic(method="GET", path=self.url, data= json.dumps(self._ma_data), content_type='application/json')
+        req_data=self.client.generic(method="POST", path=self.url, data= json.dumps(self._ma_data), content_type='application/json')
     
 
         self.assertEqual(req_data.status_code, 400)
