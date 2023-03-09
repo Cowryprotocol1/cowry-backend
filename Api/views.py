@@ -674,7 +674,7 @@ class OFF_RAMP_FIAT(APIView):
 
 
 class OFF_BOARDING_MA(APIView):
-    def get(self, request):
+    def post(self, request):
         print("Need to handle api verifying users with both UID and pubkey")
 
         # ma thats want to offboard will call this endpoint with their UID and pub key
@@ -689,6 +689,7 @@ class OFF_BOARDING_MA(APIView):
         _data["merchant_Id"] = merchant_Id
         _data["merchant_PubKey"] = merchant_PubKey
         serialized_obj = OffBoard_A_MerchantSerializer(data=_data)
+        print(_data)
         if serialized_obj.is_valid():
 
             try:
@@ -804,8 +805,8 @@ class OFF_BOARDING_MA(APIView):
                 {"error": serialized_obj.errors}, status=status.HTTP_400_BAD_REQUEST
             )
 
-    def post(self, request):
-        return Response(data={"ok"}, status=status.HTTP_200_OK)
+    # def post(self, request):
+    #     return Response(data={"ok"}, status=status.HTTP_200_OK)
 
 
 class MerchantDepositConfirmation(APIView):
