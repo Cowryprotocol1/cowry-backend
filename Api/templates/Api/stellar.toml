@@ -39,6 +39,7 @@ is_asset_anchored = true
 anchor_asset_type = "fiat"
 anchor_asset = "NGN"
 info_server = "https://cowry-backend.herokuapp.com/sep6/info"
+attestation_of_reserve="https://cowry-backend.herokuapp.com/audit_protocol"
 
 ###################################
 # Required compliance fields:
