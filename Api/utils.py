@@ -1,6 +1,6 @@
 import logging
 import random
-import secrets, time
+import secrets
 
 from typing import List
 
@@ -16,18 +16,18 @@ from Blockchains.Stellar.operations import (
 from decouple import config
 from modelApp.utils import (
     add_and_update_transaction_hash,
-    all_merchant_token_bal,
     all_merchant_token_bal_no_filter,
     assign_transaction_to_merchant,
     check_transaction_hash_if_processed,
-    get_all_merchant_object,
-    get_transaction_By_Id,
     update_merchant_by_allowedLicenseAmount,
 )
-from .serializers import TokenTableSerializer, TransactionSerializer
+from .serializers import TokenTableSerializer
 from modelApp.models import TransactionsTable
-from modelApp.utils import update_cleared_uncleared_bal
+# from modelApp.utils import update_cleared_uncleared_bal
 
+    # get_all_merchant_object,
+    # get_transaction_By_Id,
+    # all_merchant_token_bal,
 
 STAKING_ADDRESS = config("STAKING_ADDRESS")
 STAKING_TOKEN_CODE = config("STAKING_TOKEN_CODE")
@@ -53,20 +53,15 @@ def amount_to_naira(amount):
     # Convert amount to Naira
     # Using binance API
     # we might need to add a qoute column to db to store the qoute price an MA naira was minted
-    print(amount)
+
     price_url = "https://api.binance.com/api/v3/avgPrice?symbol=USDTNGN"
     response = requests.get(price_url)
-    print(response.content)
-    print(response.status_code)
-    print(response.content.decode())
+
     if response.status_code == 200:
-        print(response.json())
-        print(response.json()["price"])
         price = round(float(response.json()["price"]), 7)
         naira_amount = round(float(amount) * float(price), 7)
 
         to_mint_amt = naira_amount * IFP_STAKE_MINT_VALUE
-        print("this is inside", to_mint_amt, price)
         return [to_mint_amt, price]
     return
 
@@ -91,7 +86,6 @@ def isTransaction_Valid(
         print(e)
         pass
     else:
-        print("celery has picked up tx")
 
         amt = round(float(tx["_embedded"]["records"][0]["amount"]), 7)
         recipient_add = tx["_embedded"]["records"][0]["to"]
@@ -99,10 +93,7 @@ def isTransaction_Valid(
         asset_code = tx["_embedded"]["records"][0]["asset_code"]
         asset_issuer = tx["_embedded"]["records"][0]["asset_issuer"]
         transaction_hash =  tx["_embedded"]["records"][0]['transaction_hash']
-        # print("addresses", recipient_add, _address)
-        # print("codes", asset_code, _asset_code)
-        # print("issuers", asset_issuer, _asset_issuer)
-
+      
         if (
             recipient_add == _address
             and asset_code == _asset_code
@@ -110,44 +101,34 @@ def isTransaction_Valid(
         ):
             hash_check = check_transaction_hash_if_processed(transaction_hash)
             # If above conditions are met, then the transaction is valid and we have not processed it before
-            print(hash_check)
             if hash_check == True:
-                print("Hash already processed")
+                # has already been processed
                 pass
             elif hash_check == False:
                 try:
                     if recipient_add == STAKING_ADDRESS:
-                        print("got inside")
                         try:
-                            print("got to the top")
                             [mint_amt, price] = amount_to_naira(amt)
-                            print("this is mint", mint_amt, price)
                             update_balance_details = (
                                         update_merchant_by_allowedLicenseAmount(
                                             memo, mint_amt, amt, price, transaction_hash
                                         )
                                     )
-                            print("update_balance_details", update_balance_details)
 
                             if update_balance_details == True:
                                     mint_token = Mint_Token(
                                         sender, round(float(mint_amt), 7), str(memo)
                                     )
-                                    print("Mint_Token", mint_token)
                             else:
                                 print("Transaction failed")
                                 # Transaction failed, send notification to admin group
                         except Exception as error:
-                            print("mah this place we dey")
-                            print(error)
-                            print("this is a critical error")
                             pass
 
                     elif recipient_add == STABLECOIN_ISSUER:
                         try:
                             tx_obj = TransactionsTable.objects.get(id=memo)
                         except TransactionsTable.DoesNotExist:
-                            print("memo does not exist")
                             pass
                         except Exception:
                             #notify admin

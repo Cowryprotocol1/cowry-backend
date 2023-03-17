@@ -2,83 +2,55 @@ import logging
 import os
 from urllib.parse import urlparse
 
-from Blockchains.Stellar.operations import (
-    ALLOWED_AND_LICENSE_P_ADDRESS,
-    ALLOWED_TOKEN_CODE,
-    LICENSE_TOKEN_CODE,
-    LICENSE_TOKEN_ISSUER,
-    PROTOCOL_FEE_ACCOUNT,
-    STABLECOIN_CODE,
-    STABLECOIN_ISSUER,
-    STAKING_ADDRESS,
-    OffBoard_Merchant_with_Burn,
-    User_withdrawal_from_protocol,
-    get_network_passPhrase,
-    is_Asset_trusted,
-    get_horizon_server,
-    merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor,
-    DOMAIN,
-    build_challenge_tx,
-    server_verify_challenge,
-    generate_jwt
-)
-from Blockchains.Stellar.utils import check_address_balance,getStellar_tx_fromMemo, check_stellar_address, protocolAssetTotalSupply
 from decouple import config
 from django.db import IntegrityError
-from django.http import JsonResponse, HttpResponse
-from modelApp.models import MerchantsTable, TokenTable, TransactionsTable, TxHashTable
-from modelApp.utils import (
-    all_merchant_token_bal,
-    protocolAudit,
-    delete_merchant,
-    get_merchant_by_pubKey,
-    update_transaction_status,
-    get_transaction_By_Id,
-    get_pending_transactions,
-    update_cleared_uncleared_bal,
-    update_pending_transaction_model,
-    update_PendingTransaction_Model,
-    update_sep_transaction,
-    update_sep_transaction_no_ifp,
-    update_xdr_table,
-    insert_sep_transaction,
-    get_all_transaction_for_merchant,
-    get_transaction_by_pubKey
-)
+from django.db.models import F
+from django.http import HttpResponse, JsonResponse
 from rest_framework import status
 from rest_framework.decorators import api_view
+from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from stellar_sdk import TransactionEnvelope, TrustLineFlags
-from stellar_sdk.exceptions import NotFoundError, BadRequestError, BadResponseError
+from stellar_sdk import TransactionEnvelope
+from stellar_sdk.exceptions import (BadRequestError, BadResponseError,
+                                    NotFoundError)
 
-from utils.utils import uidGenerator, Id_generator
+from Blockchains.Stellar.operations import (
+    ALLOWED_AND_LICENSE_P_ADDRESS, ALLOWED_TOKEN_CODE, DOMAIN,
+    LICENSE_TOKEN_CODE, LICENSE_TOKEN_ISSUER,
+    STABLECOIN_CODE, STABLECOIN_ISSUER, STAKING_ADDRESS,
+    OffBoard_Merchant_with_Burn, User_withdrawal_from_protocol,
+    build_challenge_tx, generate_jwt, get_horizon_server,
+    get_network_passPhrase, is_Asset_trusted,
+    merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor,
+    server_verify_challenge)
+from Blockchains.Stellar.utils import (check_address_balance,
+                                    check_stellar_address,
+                                    getStellar_tx_fromMemo,
+                                    protocolAssetTotalSupply)
+from modelApp.models import (MerchantsTable, TokenTable,
+                             TransactionsTable)
+from modelApp.utils import ( delete_merchant,
+                            get_all_transaction_for_merchant,
+                            get_merchant_by_pubKey, get_pending_transactions,
+                            get_transaction_by_pubKey,
+                            insert_sep_transaction, protocolAudit,
+                            update_cleared_uncleared_bal,
+                            update_pending_transaction_model,
+                            update_PendingTransaction_Model,
+                            update_sep_transaction,
+                            update_sep_transaction_no_ifp,
+                            update_transaction_status, update_xdr_table)
+from utils.utils import Id_generator, uidGenerator
 
-from .serializers import (
-    EventSerializer,
-    Fiat_Off_RampSerializer,
-    XdrSerializer,
-    Fiat_On_RampSerializer,
-    MerchantsTableSerializer,
-    OffBoard_A_MerchantSerializer,
-    TokenTableSerializer,
-    TransactionSerializer,
-    XdrGeneratedTransactionSerializer,
-    Sep6DepositSerializer,
-    Sep6WithdrawalSerializer,
-)
-from .utils import (
-    PROTOCOL_COMMISSION,
-    STAKING_TOKEN_ISSUER,
-    Notifications,
-    isTransaction_Valid,
-    merchants_to_process_transaction,
-)
-from rest_framework.renderers import TemplateHTMLRenderer
-from modelApp.models import PeriodicTaskRun
-from django.utils import timezone
-from django.db.models import Sum, F, Q, Value, CharField
-
+from .serializers import ( Fiat_Off_RampSerializer,
+                          Fiat_On_RampSerializer, MerchantsTableSerializer,
+                          OffBoard_A_MerchantSerializer, Sep6DepositSerializer,
+                          Sep6WithdrawalSerializer,
+                          TransactionSerializer,
+                          XdrGeneratedTransactionSerializer, XdrSerializer)
+from .utils import ( STAKING_TOKEN_ISSUER, Notifications,
+                    isTransaction_Valid, merchants_to_process_transaction)
 
 # new_time = timezone.now()
 # PeriodicTaskRun.objects.update(created_at=new_time)
