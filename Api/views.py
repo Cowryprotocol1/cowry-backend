@@ -816,6 +816,11 @@ class MerchantDepositConfirmation(APIView):
             )
 
         if all_transactions:
+            for transaction in all_transactions:
+                if transaction.transaction_type == "withdraw":
+                    transaction.transaction_amount = float(transaction.transaction_amount) - float(GENERAL_TRANSACTION_FEE)
+                    # print(transaction)
+                    # print(transaction.transaction_amount)
             return Response(
                 {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User", 'status':"success"},
                 status=status.HTTP_200_OK,
