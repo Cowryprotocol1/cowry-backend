@@ -23,18 +23,12 @@ def check_account_numberLen(value):
         raise ValidationError("Invalid bank account number, len should be equal 10")
 
 class MerchantsTableSerializer(serializers.ModelSerializer):
-    # blockchainAddress = serializers.CharField(
-    #     max_length=128, validators=[validate_blockchainAddress])
-
     class Meta:
         model = MerchantsTable
         fields = ['email', 'bankName', 'bankAccount', 'phoneNumber',
                 'blockchainAddress', 'UID', 'transaction_processing_status']
         # Custom validation for address field
 
-
-
-   
 class TokenTableSerializer(serializers.ModelSerializer):
     merchant = MerchantsTableSerializer(read_only=True)
     class Meta:
@@ -57,6 +51,8 @@ class EventSerializer(serializers.Serializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
+    withdrawable_deposit_amount  = serializers.FloatField(required=False)
+    #create a custom field that doesn't exist before on the model
     class Meta:
         model = TransactionsTable
         fields = '__all__'

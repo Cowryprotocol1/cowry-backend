@@ -17,25 +17,21 @@ from stellar_sdk.exceptions import (BadRequestError, BadResponseError,
 
 from Blockchains.Stellar.operations import (
     ALLOWED_AND_LICENSE_P_ADDRESS, ALLOWED_TOKEN_CODE, DOMAIN,
-    LICENSE_TOKEN_CODE, LICENSE_TOKEN_ISSUER,
-    STABLECOIN_CODE, STABLECOIN_ISSUER, STAKING_ADDRESS,
-    OffBoard_Merchant_with_Burn, User_withdrawal_from_protocol,
-    build_challenge_tx, generate_jwt, get_horizon_server,
-    get_network_passPhrase, is_Asset_trusted,
+    LICENSE_TOKEN_CODE, LICENSE_TOKEN_ISSUER, STABLECOIN_CODE,
+    STABLECOIN_ISSUER, STAKING_ADDRESS, OffBoard_Merchant_with_Burn,
+    User_withdrawal_from_protocol, build_challenge_tx, generate_jwt,
+    get_horizon_server, get_network_passPhrase, is_Asset_trusted,
     merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor,
     server_verify_challenge)
 from Blockchains.Stellar.utils import (check_address_balance,
-                                    check_stellar_address,
-                                    getStellar_tx_fromMemo,
-                                    protocolAssetTotalSupply)
-from modelApp.models import (MerchantsTable, TokenTable,
-                             TransactionsTable)
-from modelApp.utils import ( delete_merchant,
-                            get_all_transaction_for_merchant,
+                                       check_stellar_address,
+                                       getStellar_tx_fromMemo,
+                                       protocolAssetTotalSupply)
+from modelApp.models import MerchantsTable, TokenTable, TransactionsTable
+from modelApp.utils import (delete_merchant, get_all_transaction_for_merchant,
                             get_merchant_by_pubKey, get_pending_transactions,
-                            get_transaction_by_pubKey,
-                            insert_sep_transaction, protocolAudit,
-                            update_cleared_uncleared_bal,
+                            get_transaction_by_pubKey, insert_sep_transaction,
+                            protocolAudit, update_cleared_uncleared_bal,
                             update_pending_transaction_model,
                             update_PendingTransaction_Model,
                             update_sep_transaction,
@@ -43,21 +39,14 @@ from modelApp.utils import ( delete_merchant,
                             update_transaction_status, update_xdr_table)
 from utils.utils import Id_generator, uidGenerator
 
-from .serializers import ( Fiat_Off_RampSerializer,
-                          Fiat_On_RampSerializer, MerchantsTableSerializer,
+from .serializers import (Fiat_Off_RampSerializer, Fiat_On_RampSerializer,
+                          MerchantsTableSerializer,
                           OffBoard_A_MerchantSerializer, Sep6DepositSerializer,
-                          Sep6WithdrawalSerializer,
-                          TransactionSerializer,
+                          Sep6WithdrawalSerializer, TransactionSerializer,
                           XdrGeneratedTransactionSerializer, XdrSerializer)
-from .utils import ( STAKING_TOKEN_ISSUER, Notifications,
-                    isTransaction_Valid, merchants_to_process_transaction)
+from .utils import (STAKING_TOKEN_ISSUER, Notifications, isTransaction_Valid,
+                    merchants_to_process_transaction)
 
-# new_time = timezone.now()
-# PeriodicTaskRun.objects.update(created_at=new_time)
-
-
-# adc = TokenTable.objects.aggregate(Sum(("allowedTokenAmount")))
-# print(adc)
 
 STAKING_TOKEN = config("STAKING_TOKEN_CODE")
 STAKING_ADDRESS = config("STAKING_ADDRESS")
@@ -744,11 +733,15 @@ class OFF_BOARDING_MA(APIView):
                                     MerchantsTable.objects.filter(
                                         UID=merchant_Id
                                     ).delete()
+
+
+                                    
                                     _message = {}
                                     _message[
                                         "message"
                                     ] = "Please sign and submit the XDR below within 30min to complete the transaction"
                                     _message["raw_xdr"] = raw_xdr
+
                                     logging.info(
                                         f"Offboarding merchant {merchant_Id}, need to add interest calculation to the amount the merchant get"
                                     )
@@ -816,11 +809,18 @@ class MerchantDepositConfirmation(APIView):
             )
 
         if all_transactions:
+
             for transaction in all_transactions:
                 if transaction.transaction_type == "withdraw":
-                    transaction.transaction_amount = float(transaction.transaction_amount) - float(GENERAL_TRANSACTION_FEE)
-                    # print(transaction)
-                    # print(transaction.transaction_amount)
+            #         # transaction.transaction_amount = float(transaction.transaction_amount) - float(GENERAL_TRANSACTION_FEE)
+                    withdrawable_amount = float(transaction.transaction_amount) - float(GENERAL_TRANSACTION_FEE)
+                    transaction.withdrawable_deposit_amount = withdrawable_amount
+            #         print(transaction)
+            #         print(transaction.transaction_amount)
+                elif transaction.transaction_type == "deposit":
+                    transaction.withdrawable_deposit_amount = transaction.transaction_amount
+
+                    print(transaction.withdrawable_deposit_amount)
             return Response(
                 {"all_transactions":TransactionSerializer(all_transactions, many=True).data, "msg":"for withdrawal transactions, deduct fee before sending to the User", 'status':"success"},
                 status=status.HTTP_200_OK,
@@ -1525,6 +1525,10 @@ class Sep24WithdrawalFlow(APIView):
             
         else:
             return Response({"error":sep24data.errors}, status.HTTP_400_BAD_REQUEST)
+        
+
+
+
 # class TransactionExpire(APIView):
 #     """
 #     Endpoint for merchant to cancel a transaction after a specified time and the transaction has not been processed
