@@ -4,7 +4,7 @@ from stellar_sdk import Account
 from django.core.exceptions import ValidationError
 from stellar_sdk.server import Server
 from decouple import config
-from .operations import is_account_valid, STABLECOIN_CODE, ALLOWED_AND_LICENSE_P_ADDRESS, ALLOWED_TOKEN_CODE, STABLECOIN_ISSUER, get_stellarActive_network
+from .operations import is_account_valid, STABLECOIN_CODE, ALLOWED_AND_LICENSE_P_ADDRESS, ALLOWED_TOKEN_CODE, STABLECOIN_ISSUER
 import requests
 
 horizon_server = Server(horizon_url=config("HORIZON_URL"))

@@ -27,8 +27,6 @@ class Deployment():
         self.NETWORK = _horizon_network
         self.Genesis_acct = _genesis_signer
 
-      
-
         if self.NETWORK == "testnet":
             self.server = Server("https://horizon-testnet.stellar.org")
             self._networkPassPhrase = Network.TESTNET_NETWORK_PASSPHRASE
@@ -174,18 +172,27 @@ class Deployment():
 
         print("clear payment for USDC on genesis addr ", usdc_clear_payment["hash"])
 
+
+
+
+
+
+
         print("************************************************************************************************************************")
         # setting flags for NGNLICENSE and NGNALLOWED token
+        # this adds AUTHORIZATION_REQUIRED, AUTHORIZATION_REVOCABLE, AUTHORIZATION_CLAWBACK_ENABLED
         flags_added = self.set_flags_authorization_on_an_address(
             self.Keys_to_create["ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER"])
         print("set flags on allowed and license token address", flags_added["hash"])
 
+    
         print("************************************************************************************************************************")
-        # place order for NGN-NGNALLOWED token
+        # place order for NGN-NGNALLOWED token, this allows IFP/MA to be able to directly buy [mint] the stablecoin using the ALLOWED token
         order_transaction = self.place_buy_order_for_token_against_another_token(
             self.Keys_to_create["STABLECOIN_ASSET_SIGNER"], allowed_asset.code, allowed_asset.issuer, "922337203685", ngn_asset.code, ngn_asset.issuer, "1")
         print("order placed for ngn against allowed", order_transaction["hash"])
 
+        
         print("************************************************************************************************************************")
         # adding domain to stellar 
         add_domain = self.add_domain_to_stellar()
@@ -238,7 +245,10 @@ class Deployment():
         # pass
 
     def set_flags_authorization_on_an_address(self, signer: str):
-        """This add restriction to asset issue by the account, this is set on the allowed and license address"""
+        """
+        This add restriction to asset issue by the account, this is set on the allowed and license address.
+        
+        """
         _asset_issuer_keypair = Keypair.from_secret(signer)
         src_acct = self.server.load_account(_asset_issuer_keypair.public_key)
 

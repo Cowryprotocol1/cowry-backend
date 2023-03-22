@@ -50,15 +50,17 @@ SWAP_SIGNER = config("SWAP_ACCOUNT_PRIVATE_KEY")
 
 def Mint_Token(recipient: str, amount: int, memo: str) -> bool:
     """
-    Mint token to MA, Account
+    Mint allow and license token to MA/IFP, Account
     """
     logging.critical(
         "need to handle if user address already maintain liability")
+    
     check_trustline = is_Asset_trusted(address=recipient)
     if check_trustline[0] == True:
         # this is an existing address that already has a trustline to the issuer
         logging.info(
             "Minting to an existing address that already has a trustline to the issuer")
+        
         mint_token_existing = send_and_authorize_allowed_and_license_token_existing_address(
             recipient=recipient, memo=memo, amount=str(amount), asset_signer=ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER)
         return mint_token_existing
@@ -66,6 +68,8 @@ def Mint_Token(recipient: str, amount: int, memo: str) -> bool:
         # print("minting token to a new address")
         logging.info(
             "Minting to a new address")
+        #used to send claimable balance transaction to an account without trustline
+        # still in progress
 
         token_mint = send_and_authorize_allowed_and_license_token_new_address(
             recipient, memo, str(amount), ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER)
@@ -73,11 +77,19 @@ def Mint_Token(recipient: str, amount: int, memo: str) -> bool:
         return token_mint
 
 
+# ============================================================================
+                    # Utility function
+# ============================================================================
+
 def get_horizon_server():
     return Server(horizon_url=config("HORIZON_URL"))
 
 
 def get_network_passPhrase(horizon_url=config("HORIZON_URL")) -> Network:
+    """
+    used to get the present network passphrase
+    """
+
     if "testnet" in horizon_url:
         return Network.TESTNET_NETWORK_PASSPHRASE
     else:
@@ -85,6 +97,9 @@ def get_network_passPhrase(horizon_url=config("HORIZON_URL")) -> Network:
 
 
 def get_stellarActive_network(network_url:str):
+    """
+    Used to get active network
+    """
     if "testnet" in network_url:
         return "Testnet"
     else:
@@ -92,6 +107,10 @@ def get_stellarActive_network(network_url:str):
 
 
 def is_account_valid(account_address: str) -> bool:
+    """
+    check an account has a valid sequence number onchain,
+    A way to know if an account is already created
+    """
     try:
         check = get_horizon_server().accounts().account_id(account_address).call()
         if check:
@@ -103,9 +122,11 @@ def is_account_valid(account_address: str) -> bool:
         return False
 
 # check if a given asset is trusted by an account
-
-
 def is_Asset_trusted(address: str, asset_number=2, issuerAddress=ALLOWED_AND_LICENSE_P_ADDRESS, stableCoin=STABLECOIN_ISSUER) -> bool:
+    """
+    check if a given asset is trusted by an account,
+    mainly used to an IFP/MA account has trustline for protocol list of tokens
+    """
     try:
         _balances = get_horizon_server().accounts().account_id(address).call()
         balances = _balances["balances"]
@@ -130,9 +151,10 @@ def is_Asset_trusted(address: str, asset_number=2, issuerAddress=ALLOWED_AND_LIC
 
 
 def send_and_authorize_allowed_and_license_token_new_address(recipient: str, memo: str, amount: str, asset_signer: str):
-    """ This is used to send payments from the issuers account to an MA account,
-        This is only expected to be called when onboarding an MA, it handles both minting and authorizing 
-        license and allowed token
+    """ 
+    This is used to send payments from the issuers account to an MA account,
+    This is only expected to be called when onboarding an MA, it handles both minting and authorizing 
+    license and allowed token
     """
     base_fee = get_horizon_server().fetch_base_fee()
     authorizer_of_tx = Keypair.from_secret(
@@ -144,7 +166,7 @@ def send_and_authorize_allowed_and_license_token_new_address(recipient: str, mem
     allow_asset = Asset(code=ALLOWED_TOKEN_CODE,
                         issuer=ALLOWED_AND_LICENSE_P_ADDRESS)
     license_asset = Asset(code=LICENSE_TOKEN_CODE,
-                          issuer=LICENSE_TOKEN_ISSUER)
+                        issuer=LICENSE_TOKEN_ISSUER)
 
     burn_auth_payment = TransactionBuilder(
         source_account=src_acct,
@@ -164,9 +186,12 @@ def send_and_authorize_allowed_and_license_token_new_address(recipient: str, mem
 
 
 def send_and_authorize_allowed_and_license_token_existing_address(recipient: str, memo: str, amount: str, asset_signer: str):
+    """
+    used function to send allowed and license token to the recipient account
+    """
     base_fee = get_horizon_server().fetch_base_fee()
     authorizer_of_tx = Keypair.from_secret(
-        DELEGATED_SIGNER_ADDRESS)  # DELEGATED_SIGNER_ADDRESS has the required weight to authorise the transaction
+        DELEGATED_SIGNER_ADDRESS)  # DELEGATED_SIGNER_ADDRESS has the required weight to authorize the transaction
     _asset_signer = Keypair.from_secret(asset_signer)
 
     src_acct = get_horizon_server().load_account(_asset_signer.public_key)
@@ -180,13 +205,14 @@ def send_and_authorize_allowed_and_license_token_existing_address(recipient: str
         base_fee=base_fee,
         network_passphrase=get_network_passPhrase()
     ).add_text_memo(memo_text=memo
-                    ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=recipient, asset=allow_asset, source=_asset_signer.public_key
-                                                     ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=recipient, asset=license_asset, source=_asset_signer.public_key
-                                                                                      ).append_payment_op(destination=recipient, amount=str(amount), asset=allow_asset, source=_asset_signer.public_key
-                                                                                                          ).append_payment_op(destination=recipient, amount=str(amount), asset=license_asset, source=_asset_signer.public_key
-                                                                                                                              ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG, set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, trustor=recipient, asset=allow_asset, source=_asset_signer.public_key
-                                                                                                                                                               ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG, set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, trustor=recipient, asset=license_asset, source=_asset_signer.public_key
-                                                                                                                                                                                                ).set_timeout(100).build()
+    ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=recipient, asset=allow_asset, source=_asset_signer.public_key
+    ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=recipient, asset=license_asset, source=_asset_signer.public_key
+    ).append_payment_op(destination=recipient, amount=str(amount), asset=allow_asset, source=_asset_signer.public_key
+    ).append_payment_op(destination=recipient, amount=str(amount), asset=license_asset, source=_asset_signer.public_key
+    ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG, set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, trustor=recipient, asset=allow_asset, source=_asset_signer.public_key
+    ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG, set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, trustor=recipient, asset=license_asset, source=_asset_signer.public_key
+    ).set_timeout(100).build()
+    
     burn_auth_payment.sign(authorizer_of_tx)
     submitted_tx = get_horizon_server().submit_transaction(burn_auth_payment)
     return submitted_tx
@@ -201,6 +227,11 @@ def send_and_authorize_allowed_and_license_token_existing_address(recipient: str
 def manage_buy_order(signer_key: str, buying_asset_code, buying_asset_issuer, amount,
                     selling_asset_code, selling_asset_issuer, starting_price_per_unit,
                     offerId=0):
+    
+    """
+    used to create buy order on the dex
+    
+    """
 
     base_fee = get_horizon_server().fetch_base_fee()
     keypair_sender = Keypair.from_secret(signer_key)
@@ -226,6 +257,9 @@ def manage_buy_order(signer_key: str, buying_asset_code, buying_asset_issuer, am
     # submit transaction
     submitted_tx = get_horizon_server().submit_transaction(manage_buy_order_tx)
     return submitted_tx
+
+
+
 
 
 def merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor(
@@ -257,20 +291,17 @@ def merchants_swap_ALLOWED_4_NGN_Send_payment_2_depositor(
         source_account=source_acct,
         base_fee=base_fee,
         network_passphrase=get_network_passPhrase()
-    ).add_text_memo(memo_text=memo_text
-).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG,
-set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=trustorPub, asset=authorized_asset,
-source=keypair_sender.public_key
-).append_manage_sell_offer_op(selling=selling_asset, buying=buying_asset,
-amount=str_amount, price=unit_price, offer_id=offerId,
-source=trustorPub
-).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG,
-set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG,
-trustor=trustorPub, asset=authorized_asset,
-source=keypair_sender.public_key
-).append_payment_op(destination=depositor_pubKey, asset=buying_asset, amount=amount_minus_fee, source=trustorPub
-).append_payment_op(destination=PROTOCOL_FEE_ACCOUNT, asset=buying_asset, amount=str(round(protocol_fee, 7)), source=trustorPub
-).build()
+        ).add_text_memo(memo_text=memo_text
+        ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=trustorPub, asset=authorized_asset,
+                        source=keypair_sender.public_key
+        ).append_manage_sell_offer_op(selling=selling_asset, buying=buying_asset, amount=str_amount, price=unit_price, offer_id=offerId, source=trustorPub
+        ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_FLAG,
+        set_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG,
+        trustor=trustorPub, asset=authorized_asset,
+        source=keypair_sender.public_key
+        ).append_payment_op(destination=depositor_pubKey, asset=buying_asset, amount=amount_minus_fee, source=trustorPub
+        ).append_payment_op(destination=PROTOCOL_FEE_ACCOUNT, asset=buying_asset, amount=str(round(protocol_fee, 7)), source=trustorPub
+        ).build()
 
     # sign transaction
     authorized_asset_tx.sign(authorizer_of_tx)
@@ -311,6 +342,7 @@ def OffBoard_Merchant_with_Burn(recipient_pub_key: str, amount: str, memo: str, 
         base_fee=base_fee,
         network_passphrase=get_network_passPhrase()
     ).add_text_memo(memo_text=memo
+                    
     ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=recipient_pub_key, asset=allow_asset, source=_regulated_asset_signer.public_key
     ).append_set_trust_line_flags_op(clear_flags=TrustLineFlags.AUTHORIZED_TO_MAINTAIN_LIABILITIES_FLAG, set_flags=TrustLineFlags.AUTHORIZED_FLAG, trustor=recipient_pub_key, asset=license_asset, source=_regulated_asset_signer.public_key
     ).append_payment_op(destination=ALLOWED_AND_LICENSE_P_ADDRESS, amount=str(amount), asset=allow_asset, source=recipient_pub_key
@@ -328,7 +360,8 @@ def OffBoard_Merchant_with_Burn(recipient_pub_key: str, amount: str, memo: str, 
 def User_withdrawal_from_protocol(merchant_pub_key: str, amount: str, memo: str, user_withdrawing_from_protocol_address: str, allowed_license_token_signer=ALLOWED_AND_LICENSE_P_ADDRESS_SIGNER) -> XDR:
     """
     Function used to off ramp a user deposited fiat asset,
-    User send payment to the protocol address and the protocol address will use this function to send payment between protocol and merchant for minting allowed and stablecoin
+    User send payment to the protocol address and the protocol address will use this function,
+    to send payment between protocol and merchant for minting allowed and stablecoin
 
     """
     base_fee = get_horizon_server().fetch_base_fee()
@@ -369,6 +402,7 @@ def User_withdrawal_from_protocol(merchant_pub_key: str, amount: str, memo: str,
     ).set_timeout(1200).build()
     burn_auth_payment.sign(authorizer_of_tx)
     burn_auth_payment.sign(protocol_signer)
+
     submit_transaction = get_horizon_server().submit_transaction(burn_auth_payment)
 
     return submit_transaction
@@ -412,6 +446,10 @@ def add_liquidity(
         max_reserve_a: Decimal,
         max_reserve_b: Decimal,
 ) -> dict[str, Any]:
+    
+    """
+    handles adding liquidity to protocol supported stables
+    """
 
 
     exact_price = max_reserve_a / max_reserve_b
@@ -438,7 +476,11 @@ def add_liquidity(
 def remove_liquidity(
         source: Keypair, pool_id: str, shares_amount: Decimal
 ) -> dict[str, Any]:
+    """
+    remove liquidity from protocol supported stablecoin
+    """
     pool_info = get_horizon_server.liquidity_pools().liquidity_pool(pool_id).call()
+
     total_shares = Decimal(pool_info["total_shares"])
     min_reserve_a = (
             shares_amount
@@ -512,7 +554,11 @@ def Swap_assets(
     swap_path_fee,
     memo,
 ):
-    """Function used to swap between assets on stellar, This function also deduct transaction fee from the amount the User is swapping from"""
+    """
+    Function used to swap between assets on stellar,
+    This function also deduct transaction fee from the amount the User is swapping from
+    function is expecting path for the swap as an argument
+    """
     # need to include handling of fee, we need to get the fee amount and path from the backend and process payment
 
     secret_keys = Keypair.from_secret(user_secret_key)
@@ -576,7 +622,7 @@ def submit_feeBump_transaction(transaction_xdr):
         xdr=transaction_xdr, network_passphrase=get_network_passPhrase
     )
     """
-    sign transaction and submit to the blockchain using feebump transaction, the source for feebump is from sentit.
+    sign transaction and submit to the blockchain using feebump transaction.
     """
 
     transaction_key = SWAP_SIGNER #this is to be an independent account controlled by the protocol

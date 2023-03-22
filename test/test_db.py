@@ -3,8 +3,8 @@ import django
 import os
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'stablecoin.settings')
 django.setup()
-from rest_framework.test import APITestCase
 from Api.serializers import MerchantsTableSerializer
+from .test_setup  import TestSetUpClass
 
 
 from modelApp.models import *
@@ -13,7 +13,7 @@ from unittest.mock import patch
 # import unittest
 
 
-class  MerchantTableTest(APITestCase):
+class  MerchantTableTest(TestSetUpClass):
     """Test possible operations for the Merchant Db """
 
     _data = {}

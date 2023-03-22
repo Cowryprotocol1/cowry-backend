@@ -7,10 +7,14 @@ from .views import *
 urlpatterns = [
     path('', IndexPage.as_view(), name='index'),
     path('onboard', OnBoardMA.as_view(), name='onboard'), #Tested
+    
     path('deposit', ON_RAMP_FIAT_USERS.as_view(), name='deposit'), #tested
+
     path("merchants",
         MerchantDepositConfirmation.as_view(), name="merchants"), #tested
+
     path("offboarding", OFF_BOARDING_MA.as_view(), name="offboard"), #tested
+    
     path("withdrawal", OFF_RAMP_FIAT.as_view(), name="withdrawal"), #tested
     path("totalSupply", AllTokenTotalSupply.as_view(), name="totalSupply"), #tested
     path("accounts", AccountDetails.as_view(), name="Accounts"), #tested
